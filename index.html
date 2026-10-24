@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0a0c10">
 <link rel="icon" href="data:,">
-<title>Cardiac Sleep Biofeedback</title>
+<title>HR Breath Pacer</title>
 <script src="https://cdn.jsdelivr.net/npm/tone@15.1.22/build/Tone.js"></script>
 <style>
   :root {
@@ -72,6 +72,7 @@
   button.primary.running { background: #1a2130; border-color: #2c3a55; color: #8fa6cc; }
   button.small { padding: 6px 10px; font-size: 12px; }
   button.seg { padding: 4px 10px; font-size: 12px; border-radius: 8px; }
+  button.play { flex: 0 0 auto; padding: 6px 11px; color: var(--amber); }
   button.seg.active { border-color: var(--amber-dim); color: var(--amber); }
 
   .row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
@@ -116,7 +117,7 @@
 
 <header>
   <div>
-    <h1>Cardiac Sleep Biofeedback</h1>
+    <h1>HR Breath Pacer</h1>
     <div class="sub">Muzyka gra odrobinę wolniej niż Twoje serce — i prowadzi je w dół.</div>
   </div>
   <div class="spacer"></div>
@@ -235,7 +236,12 @@
         <span class="out" id="volBreathVal"></span>
       </div>
       <div class="row">
-        <label for="volCues">Sygnały oddechu</label>
+        <label for="volInhale">Sygnał wdechu</label>
+        <input type="range" id="volInhale" min="-40" max="6" step="1" value="-2">
+        <span class="out" id="volInhaleVal"></span>
+      </div>
+      <div class="row">
+        <label for="volCues">Sygnał wydechu</label>
         <input type="range" id="volCues" min="-40" max="6" step="1" value="-4">
         <span class="out" id="volCuesVal"></span>
       </div>
@@ -264,7 +270,6 @@
           <option value="prog">Wydłużaj wydech 4:6 → 4:8 (15 min)</option>
         </select>
       </div>
-      <p class="hint">Wdech zaczyna się miękkim uderzeniem misy i narastającą falą, wydech — niskim, ciepłym „mmm”, które powoli się domyka.</p>
       <div class="row">
         <span class="lbl">Uderzenie misy co</span>
         <select id="bowlInterval">
@@ -277,6 +282,74 @@
         <input type="range" id="bowlProb" min="0.1" max="1" step="0.05" value="0.6">
         <span class="out" id="bowlProbVal">60%</span>
       </div>
+    </section>
+
+    <section class="panel">
+      <h2>Dźwięki oddechu</h2>
+      <div class="row">
+        <span class="lbl">Start wdechu</span>
+        <select id="inhaleCue">
+          <option value="ping">Ping (czysty ton)</option>
+          <option value="double">Dwa tony w górę</option>
+          <option value="kalimba">Kalimba</option>
+          <option value="glass">Kryształ</option>
+          <option value="bowl">Misa</option>
+          <option value="wood">Drewienko (stuk)</option>
+          <option value="glide">Ton płynący w górę</option>
+          <option value="none">Brak</option>
+        </select>
+        <button class="small play" data-preview="in" title="Odsłuchaj">▶</button>
+      </div>
+      <div class="row">
+        <span class="lbl">Wysokość wdechu</span>
+        <select id="inhalePitch">
+          <option value="-12">Niska (najspokojniejsza)</option>
+          <option value="-7">Średnia</option>
+          <option value="0">Wysoka</option>
+        </select>
+        <button class="small play" data-preview="in" title="Odsłuchaj">▶</button>
+      </div>
+      <div class="divider"></div>
+      <div class="row">
+        <span class="lbl">Start wydechu</span>
+        <select id="exhaleCue">
+          <option value="ping">Ping (niższy niż na wdech)</option>
+          <option value="gong">Miękki gong</option>
+          <option value="deep">Głęboki „bum”</option>
+          <option value="bowl">Niska misa</option>
+          <option value="double">Dwa tony w dół</option>
+          <option value="kalimba">Kalimba (niska)</option>
+          <option value="wood">Drewienko (stuk)</option>
+          <option value="glide">Ton płynący w dół</option>
+          <option value="none">Brak</option>
+        </select>
+        <button class="small play" data-preview="out" title="Odsłuchaj">▶</button>
+      </div>
+      <div class="row">
+        <span class="lbl">Wysokość wydechu</span>
+        <select id="exhalePitch">
+          <option value="-7">O kwintę niżej niż wdech</option>
+          <option value="-5">O kwartę niżej niż wdech</option>
+          <option value="-12">O oktawę niżej niż wdech</option>
+          <option value="0">Tak samo jak wdech</option>
+        </select>
+        <button class="small play" data-preview="out" title="Odsłuchaj">▶</button>
+      </div>
+      <div class="row">
+        <span class="lbl">Tło wydechu</span>
+        <select id="exhaleSound">
+          <option value="air">Uchodzące powietrze („hhhfff”)</option>
+          <option value="sigh">Westchnienie („haaa”)</option>
+          <option value="hum">Ton „mmm”</option>
+          <option value="airhum">Powietrze + ton</option>
+          <option value="none">Brak</option>
+        </select>
+        <button class="small play" data-preview="tex" title="Odsłuchaj samo tło">▶</button>
+      </div>
+      <div class="btns" style="margin:0">
+        <button data-preview="pair">▶ Odsłuchaj całość: wdech → wydech</button>
+      </div>
+      <p class="hint">▶ działa też bez startu sesji. Zmiany w trakcie sesji słychać od następnego oddechu. Głośność sygnałów: suwaki „Sygnał wdechu” i „Sygnał wydechu” w mikserze.</p>
     </section>
 
     <section class="panel">
@@ -309,17 +382,22 @@
     lastHRAt: 0,
     sessionStart: null,
     sessionStartHR: null,
-    alpha: 0.2,
-    offset: 4,
-    minBPM: 50,
-    rsaDepth: 0.04,
+    alpha: 0.3,
+    offset: 5,
+    minBPM: 60,
+    rsaDepth: 0.08,
     defaultBPM: 60,
-    vols: { drone: -4, heart: -2, bowl: -6, breath: -6, cues: -4, master: 0 },
-    breathMode: 'sync',
+    vols: { drone: -2, heart: -6, bowl: -25, breath: 0, cues: -6, inhale: -6, master: 0 },
+    breathMode: 'fixed',
     breathPattern: '4:6',
+    exhaleSound: 'airhum',
+    inhaleCue: 'double',
+    inhalePitch: -7,
+    exhaleCue: 'double',
+    exhalePitch: 0,
     br: { phase: 'out', left: 0, start: 0, dur: 1 },
     bowlInterval: '1m',
-    bowlProb: 0.6,
+    bowlProb: 1,
     timerMinutes: 0,
     timerEndAt: null,
     timerFading: false,
@@ -331,12 +409,12 @@
     ble: { device: null, char: null, wanted: false, attempts: 0, retryTimer: null, state: 'off' },
   };
 
-  const SETTINGS_KEY = 'cardiacSleepSettings.v1';
+  const SETTINGS_KEY = 'hrBreathPacer.settings';
   function loadSettings() {
     try {
       const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null');
       if (!s) return;
-      for (const k of ['alpha', 'offset', 'minBPM', 'rsaDepth', 'breathMode', 'breathPattern', 'bowlInterval', 'bowlProb', 'timerMinutes']) {
+      for (const k of ['alpha', 'offset', 'minBPM', 'rsaDepth', 'breathMode', 'breathPattern', 'exhaleSound', 'inhaleCue', 'inhalePitch', 'exhaleCue', 'exhalePitch', 'bowlInterval', 'bowlProb', 'timerMinutes']) {
         if (s[k] !== undefined) S[k] = s[k];
       }
       if (s.vols) Object.assign(S.vols, s.vols);
@@ -344,8 +422,8 @@
   }
   function saveSettings() {
     try {
-      const { alpha, offset, minBPM, rsaDepth, breathMode, breathPattern, bowlInterval, bowlProb, timerMinutes, vols } = S;
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify({ alpha, offset, minBPM, rsaDepth, breathMode, breathPattern, bowlInterval, bowlProb, timerMinutes, vols }));
+      const { alpha, offset, minBPM, rsaDepth, breathMode, breathPattern, exhaleSound, inhaleCue, inhalePitch, exhaleCue, exhalePitch, bowlInterval, bowlProb, timerMinutes, vols } = S;
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify({ alpha, offset, minBPM, rsaDepth, breathMode, breathPattern, exhaleSound, inhaleCue, inhalePitch, exhaleCue, exhalePitch, bowlInterval, bowlProb, timerMinutes, vols }));
     } catch (e) { /* ignore */ }
   }
 
@@ -471,26 +549,172 @@
     const breathAmp = new T.Gain(0.35);
     noise.chain(breathLP, breathAmp, breathVol);
 
-    // 5) Breath cues — a soft bell marks the start of every inhale,
-    //    a warm low hum carries the whole exhale and slowly closes ("mmm")
-    const cuesVol = makeLayer(0.6, 0.7);
-    const bellLP = new T.Filter({ type: 'lowpass', frequency: 2000, rolloff: -12 });
-    bellLP.connect(cuesVol);
-    const bell = makePool(T.FMSynth, {
-      harmonicity: 3, modulationIndex: 1.5,
-      oscillator: { type: 'sine' }, modulation: { type: 'sine' },
-      envelope: { attack: 0.01, decay: 2.5, sustain: 0.05, release: 5 },
-      modulationEnvelope: { attack: 0.01, decay: 1.2, sustain: 0, release: 2 },
-    }, 4, -17, bellLP);
+    // 5) Breath cues. Inhale and exhale each have their own layer (mixer: "Sygnał wdechu" /
+    //    "Sygnał wydechu"): a short onset sound that nails the start of the phase, and for the
+    //    exhale an optional texture (air / sigh / hum) carrying the whole out-breath.
+    const cuesVol = makeLayer(0.7, 0.45);
+    const inhaleVol = makeLayer(0.7, 0.5);
+
+    // Library of onset sounds. One bank per phase so both can use the same kind at once.
+    // trim: per-sound level correction in dB, measured so all onsets of one phase are about equally loud
+    function makeCueBank(out, trim) {
+      const vol = (kind, base) => base + (trim[kind] || 0);
+      const lp = new T.Filter({ type: 'lowpass', frequency: 2400, rolloff: -12 });
+      lp.connect(out);
+      const sine = { type: 'sine' };
+      const pools = {
+        ping: makePool(T.Synth, {
+          oscillator: sine, envelope: { attack: 0.005, decay: 1.6, sustain: 0, release: 1.5 },
+        }, 4, vol('ping', -14), lp),
+        kalimba: makePool(T.FMSynth, {
+          harmonicity: 4, modulationIndex: 3, oscillator: sine, modulation: sine,
+          envelope: { attack: 0.003, decay: 0.9, sustain: 0, release: 0.8 },
+          modulationEnvelope: { attack: 0.002, decay: 0.12, sustain: 0, release: 0.1 },
+        }, 3, vol('kalimba', -14), lp),
+        glass: makePool(T.FMSynth, {
+          harmonicity: 5.4, modulationIndex: 1.2, oscillator: sine, modulation: sine,
+          envelope: { attack: 0.004, decay: 2.4, sustain: 0, release: 2 },
+          modulationEnvelope: { attack: 0.004, decay: 1.5, sustain: 0, release: 1 },
+        }, 3, vol('glass', -20), lp),
+        bowl: makePool(T.FMSynth, {
+          harmonicity: 3, modulationIndex: 1.5, oscillator: sine, modulation: sine,
+          envelope: { attack: 0.01, decay: 2.5, sustain: 0.05, release: 5 },
+          modulationEnvelope: { attack: 0.01, decay: 1.2, sustain: 0, release: 2 },
+        }, 3, vol('bowl', -12), lp),
+        wood: makePool(T.MembraneSynth, {
+          pitchDecay: 0.012, octaves: 1.5, oscillator: sine,
+          envelope: { attack: 0.001, decay: 0.14, sustain: 0, release: 0.08 },
+        }, 2, vol('wood', -8), lp),
+        gong: makePool(T.FMSynth, {
+          harmonicity: 1.41, modulationIndex: 3.5, oscillator: sine, modulation: sine,
+          envelope: { attack: 0.03, decay: 4, sustain: 0, release: 4 },
+          modulationEnvelope: { attack: 0.03, decay: 2.5, sustain: 0, release: 3 },
+        }, 3, vol('gong', -10), lp),
+        deep: makePool(T.MembraneSynth, {
+          pitchDecay: 0.25, octaves: 0.7, oscillator: sine,
+          envelope: { attack: 0.02, decay: 2.2, sustain: 0, release: 1.5 },
+        }, 2, vol('deep', -4), lp),
+      };
+      // soft tone gliding a fourth up (inhale) or down (exhale) onto the chord note
+      const glideVoices = Array.from({ length: 3 }, () => {
+        const v = new T.Synth({
+          oscillator: { type: 'fatsine', count: 2, spread: 8 },
+          envelope: { attack: 0.5, attackCurve: 'sine', decay: 1.2, sustain: 0.4, release: 1.8 },
+        });
+        v.volume.value = vol('glide', -17);
+        v.connect(lp);
+        return v;
+      });
+      let glideIdx = 0;
+      function glide(f1, time, dur, up) {
+        const v = glideVoices[glideIdx++ % glideVoices.length];
+        const f0 = f1 * Math.pow(2, (up ? -5 : 5) / 12);
+        v.triggerAttackRelease(f0, Math.min(2.5, dur * 0.6), time, 0.7);
+        v.frequency.setValueAtTime(f0, time);
+        v.frequency.exponentialRampToValueAtTime(f1, time + Math.min(1.6, dur * 0.45));
+      }
+      return {
+        play(kind, time, f, dur, up) {
+          const step = Math.pow(2, (up ? 7 : -5) / 12); // up a fifth / down a fourth
+          switch (kind) {
+            case 'ping': pools.ping.trigger(f, 1.2, time, 0.8); break;
+            case 'double':
+              pools.ping.trigger(f, 0.8, time, 0.7);
+              pools.ping.trigger(f * step, 1.2, time + 0.22, 0.65);
+              break;
+            case 'kalimba': pools.kalimba.trigger(f, 0.6, time, 0.8); break;
+            case 'glass': pools.glass.trigger(f * 2, 1.5, time, 0.6); break;
+            case 'bowl': pools.bowl.trigger(f, 1.5, time, 0.7); break;
+            case 'wood': pools.wood.trigger(f, 0.1, time, 0.8); break;
+            case 'gong': pools.gong.trigger(f / 2, 2, time, 0.8); break;
+            case 'deep': pools.deep.trigger(f / 2, 1.5, time, 0.9); break;
+            case 'glide': glide(f, time, dur, up); break;
+          }
+        },
+        releaseAll() {
+          Object.values(pools).forEach(p => p.releaseAll());
+          glideVoices.forEach(v => v.triggerRelease());
+        },
+      };
+    }
+    const inBank = makeCueBank(inhaleVol, { ping: 0, kalimba: 7, glass: 12, bowl: 3, wood: 5, glide: -1.5 });
+    const outBank = makeCueBank(cuesVol, { ping: 5, gong: 5.5, deep: -12, bowl: 9.5, kalimba: 10, wood: -6, glide: 4.5 });
 
     const humFilter = new T.Filter({ type: 'lowpass', frequency: 300, rolloff: -24, Q: 1.5 });
     humFilter.connect(cuesVol);
     const hum = makePool(T.Synth, {
       oscillator: { type: 'fattriangle', count: 2, spread: 14 },
       envelope: { attack: 0.35, attackCurve: 'sine', decay: 1.5, sustain: 0.6, release: 2.5 },
-    }, 6, -19, humFilter);
+    }, 6, -17, humFilter);
 
-    const layers = { drone: droneVol, heart: heartVol, bowl: bowlVol, breath: breathVol, cues: cuesVol };
+    // Air release ("hhhfff"): dark noise through a wide band-pass drifting down — a slow, soft let-out of air
+    const airNoise = new T.Noise({ type: 'pink', volume: -4 });
+    const airBP = new T.Filter({ type: 'bandpass', frequency: 1200, Q: 0.5 });
+    const airLP = new T.Filter({ type: 'lowpass', frequency: 1800, rolloff: -24 });
+    const airGain = new T.Gain(0);
+    airNoise.chain(airBP, airLP, airGain, cuesVol);
+
+    // Sigh ("haaa"): pink noise through two vowel formants gliding down
+    const sighNoise = new T.Noise({ type: 'pink', volume: 4 });
+    const sighF1 = new T.Filter({ type: 'bandpass', frequency: 750, Q: 4 });
+    const sighF2 = new T.Filter({ type: 'bandpass', frequency: 1200, Q: 5 });
+    const sighF2Gain = new T.Gain(0.55);
+    const sighGain = new T.Gain(0);
+    sighNoise.fan(sighF1, sighF2);
+    sighF1.connect(sighGain);
+    sighF2.chain(sighF2Gain, sighGain);
+    sighGain.connect(cuesVol);
+
+    // Envelope: gentle linear swell to the peak, then a long, slow release across the whole exhale
+    function exhaleEnvelope(gainParam, time, dur, peak, attack) {
+      gainParam.cancelScheduledValues(time);
+      gainParam.setValueAtTime(0, time);
+      gainParam.linearRampToValueAtTime(peak, time + attack);
+      gainParam.setTargetAtTime(0, time + attack, Math.max(0.5, (dur - attack) / 2.5));
+    }
+    function sweep(param, time, dur, from, to) {
+      param.cancelScheduledValues(time);
+      param.setValueAtTime(from, time);
+      param.exponentialRampToValueAtTime(to, time + dur);
+    }
+
+    function exhaleTextureAt(time, dur) {
+      const sound = S.exhaleSound;
+      const attack = Math.min(1.2, dur * 0.22);
+      if (sound === 'air' || sound === 'airhum') {
+        exhaleEnvelope(airGain.gain, time, dur, 0.7, attack);
+        sweep(airBP.frequency, time, dur, 1300, 280);
+      }
+      if (sound === 'sigh') {
+        exhaleEnvelope(sighGain.gain, time, dur, 0.9, attack);
+        sweep(sighF1.frequency, time, dur, 800, 450);
+        sweep(sighF2.frequency, time, dur, 1250, 850);
+      }
+      if (sound === 'hum' || sound === 'airhum') {
+        sweep(humFilter.frequency, time, dur, 950, 170);
+        hum.trigger(curChord.hum, dur * 0.8, time, sound === 'hum' ? 0.9 : 0.6);
+      }
+    }
+
+    // Onset pitches follow the current chord; the exhale ping is set relative to the inhale one
+    // (default a fifth lower: "ding" in, "dong" out)
+    function inhaleFreq() {
+      return T.Frequency(curChord.bell).toFrequency() * Math.pow(2, S.inhalePitch / 12);
+    }
+    function inhaleCueAt(time, dur) {
+      inBank.play(S.inhaleCue, time, inhaleFreq(), dur, true);
+    }
+    function exhaleOnsetAt(time, dur) {
+      outBank.play(S.exhaleCue, time, inhaleFreq() * Math.pow(2, S.exhalePitch / 12), dur, false);
+    }
+    function exhaleCueAt(time, dur) {
+      exhaleOnsetAt(time, dur);
+      // the texture starts a moment later so the onset ping always sounds on its own
+      const gap = S.exhaleCue === 'none' ? 0 : 0.3;
+      exhaleTextureAt(time + gap, dur - gap);
+    }
+
+    const layers = { drone: droneVol, heart: heartVol, bowl: bowlVol, breath: breathVol, cues: cuesVol, inhale: inhaleVol };
 
     let curChord = CHORDS[0];
     let chordIdx = 0;
@@ -520,23 +744,22 @@
       const end = time + dur;
       const f = breathLP.frequency, gn = breathAmp.gain;
       if (inhale) {
-        // front-loaded swell: clearly audible within the first ~0.6 s, keeps rising to the top
-        f.exponentialRampTo(380, 0.6, time);
-        f.exponentialRampToValueAtTime(650, end);
-        gn.linearRampTo(0.75, 0.6, time);
-        gn.linearRampToValueAtTime(1, end);
-        droneFilter.frequency.exponentialRampTo(520, dur, time);
-        heartLP.frequency.linearRampTo(165, dur, time);
-        bell.trigger(curChord.bell, 1.5, time, 0.5);
+        // inhale: barely-there, slowly gathering wave
+        f.exponentialRampTo(280, dur, time);
+        gn.linearRampTo(0.4, dur, time);
+        droneFilter.frequency.exponentialRampTo(430, dur, time);
+        heartLP.frequency.linearRampTo(140, dur, time);
+        inhaleCueAt(time, dur);
       } else {
-        f.exponentialRampTo(110, dur, time);
-        gn.linearRampTo(0.3, dur, time);
+        // exhale: the wave rolls over softly at the onset (~1 s), then recedes for the whole exhale
+        const swell = Math.min(1, dur * 0.2);
+        f.exponentialRampTo(550, swell, time);
+        f.exponentialRampToValueAtTime(110, end);
+        gn.linearRampTo(0.8, swell, time);
+        gn.linearRampToValueAtTime(0.2, end);
         droneFilter.frequency.exponentialRampTo(260, dur, time);
         heartLP.frequency.linearRampTo(105, dur, time);
-        humFilter.frequency.cancelScheduledValues(time);
-        humFilter.frequency.setValueAtTime(950, time);
-        humFilter.frequency.exponentialRampToValueAtTime(170, end);
-        hum.trigger(curChord.hum, dur * 0.8, time, 0.7);
+        exhaleCueAt(time, dur);
       }
       // Tempo settles onto the HR target during inhale and decelerates through every exhale
       rampTempo(goalBPM, dur * 0.95, time);
@@ -590,13 +813,16 @@
       if (S.breathMode === 'sync') breathTick(time, 'sync');
       // pulse swells a little on inhale and fades through the exhale
       const p = Math.min(1, Math.max(0, (time - S.br.start) / S.br.dur));
-      const vel = S.br.phase === 'in' ? 0.62 + 0.2 * p : 0.82 - 0.42 * p;
+      // pulse: soft and flat on inhale, strongest on the first exhale beat, then fading
+      const vel = S.br.phase === 'in' ? 0.52 + 0.08 * p : 0.85 - 0.45 * p;
       heart.triggerAttackRelease('G1', 0.15, time, vel);
       draw.schedule(() => { vis.lastBeat = performance.now(); vis.beatVel = vel; }, time);
 
       // sparse bowl every 1 or 2 bars (4/4), first one after one bar
       const every = S.bowlInterval === '2m' ? 8 : 4;
-      if (i >= 4 && i % every === 0 && Math.random() < S.bowlProb) {
+      // never right after a phase start, so a random bowl can't be mistaken for a breath cue
+      const nearCue = time - S.br.start < 1.5;
+      if (i >= 4 && i % every === 0 && !nearCue && Math.random() < S.bowlProb) {
         const sc = curChord.scale;
         const note = sc[Math.floor(Math.random() * sc.length)];
         const t = time + Math.random() * 0.06; // light humanize
@@ -627,8 +853,8 @@
     }, 0.05);
 
     A = {
-      ctx, master, fade, layers, noise, breathLP, breathAmp, droneFilter, heartLP,
-      drone, bowl, bell, hum, nextChord, stopChords, bpmAt, setTempo, startScheduler,
+      ctx, master, fade, layers, noise, airNoise, sighNoise, airGain, sighGain, breathLP, breathAmp, droneFilter, heartLP,
+      drone, bowl, hum, inBank, outBank, inhaleCueAt, exhaleCueAt, exhaleOnsetAt, exhaleTextureAt, nextChord, stopChords, bpmAt, setTempo, startScheduler,
     };
     applyAllVolumes();
   }
@@ -660,7 +886,7 @@
       A.setTempo(S.targetBPM ?? S.defaultBPM);
       A.startScheduler();
       S.br = { phase: 'out', left: 0, start: 0, dur: 1 };
-      for (const [param, v] of [[A.breathLP.frequency, 120], [A.breathAmp.gain, 0.3], [A.droneFilter.frequency, 380], [A.heartLP.frequency, 150]]) {
+      for (const [param, v] of [[A.breathLP.frequency, 120], [A.breathAmp.gain, 0.2], [A.droneFilter.frequency, 380], [A.heartLP.frequency, 140], [A.airGain.gain, 0], [A.sighGain.gain, 0]]) {
         param.cancelScheduledValues(now);
         param.setValueAtTime(v, now);
       }
@@ -668,7 +894,7 @@
       A.fade.gain.setValueAtTime(A.fade.gain.getValueAtTime(now), now);
       A.fade.gain.linearRampTo(1, 6, now);
 
-      if (A.noise.state !== 'started') A.noise.start(now);
+      for (const n of [A.noise, A.airNoise, A.sighNoise]) if (n.state !== 'started') n.start(now);
       A.stopChords();
       A.nextChord();
 
@@ -704,10 +930,13 @@
     setTimeout(() => {
       if (token !== S.stopToken) return; // restarted meanwhile
       A.noise.stop();
+      A.airNoise.stop();
+      A.sighNoise.stop();
       A.drone.releaseAll();
       A.bowl.releaseAll();
-      A.bell.releaseAll();
       A.hum.releaseAll();
+      A.inBank.releaseAll();
+      A.outBank.releaseAll();
     }, fadeSec * 1000 + 150);
     vis.phase = 'idle';
     S.timerEndAt = null;
@@ -719,6 +948,46 @@
     $('chordName').textContent = '—';
     setStatus(reason === 'timer' ? 'Wyłącznik czasowy zakończył sesję. Dobranoc.' : 'Sesja zatrzymana.');
     updatePills();
+  }
+
+  // ---------------------------------------------------------------- sound preview (▶ buttons)
+  let previewToken = 0;
+  async function previewCue(which) {
+    try {
+      await Tone.start();
+      if (!A) {
+        setStatus('Przygotowuję dźwięki…');
+        await buildAudio();
+        setStatus('');
+      }
+      const now = Tone.now();
+      const t = now + 0.08;
+      if (!S.running) {
+        // outside a session the output is faded out and the exhale noises are stopped:
+        // open them just for the preview, then close again
+        const token = ++previewToken;
+        A.fade.gain.cancelScheduledValues(now);
+        A.fade.gain.setValueAtTime(1, now);
+        for (const n of [A.airNoise, A.sighNoise]) if (n.state !== 'started') n.start(now);
+        const total = which === 'pair' ? 11 : which === 'tex' ? 7 : 4;
+        setTimeout(() => {
+          if (token !== previewToken || S.running) return;
+          A.fade.gain.linearRampTo(0, 0.5);
+          setTimeout(() => {
+            if (token !== previewToken || S.running) return;
+            A.airNoise.stop();
+            A.sighNoise.stop();
+          }, 700);
+        }, total * 1000);
+      }
+      if (which === 'in' || which === 'pair') A.inhaleCueAt(t, 4);
+      if (which === 'out') A.exhaleOnsetAt(t, 6);
+      if (which === 'tex') A.exhaleTextureAt(t, 6);
+      if (which === 'pair') A.exhaleCueAt(t + 4, 6);
+    } catch (err) {
+      console.warn(err);
+      setStatus('Nie udało się odtworzyć podglądu: ' + (err && err.message ? err.message : err), true);
+    }
   }
 
   // ---------------------------------------------------------------- biofeedback
@@ -1234,12 +1503,19 @@
     bindRange('volBowl', S.vols.bowl, fmtDb, v => { S.vols.bowl = v; applyVolume('bowl'); });
     bindRange('volBreath', S.vols.breath, fmtDb, v => { S.vols.breath = v; applyVolume('breath'); });
     bindRange('volCues', S.vols.cues, fmtDb, v => { S.vols.cues = v; applyVolume('cues'); });
+    bindRange('volInhale', S.vols.inhale, fmtDb, v => { S.vols.inhale = v; applyVolume('inhale'); });
     bindRange('volMaster', S.vols.master, fmtDb, v => { S.vols.master = v; applyVolume('master'); });
 
     bindRange('bowlProb', S.bowlProb, v => Math.round(v * 100) + '%', v => { S.bowlProb = v; });
 
     bindSelect('breathMode', S.breathMode, v => { S.breathMode = v; S.br.left = 0; });
     bindSelect('breathPattern', S.breathPattern, v => { S.breathPattern = v; });
+    bindSelect('exhaleSound', S.exhaleSound, v => { S.exhaleSound = v; });
+    bindSelect('inhaleCue', S.inhaleCue, v => { S.inhaleCue = v; });
+    bindSelect('inhalePitch', S.inhalePitch, v => { S.inhalePitch = parseInt(v, 10) || 0; });
+    bindSelect('exhaleCue', S.exhaleCue, v => { S.exhaleCue = v; });
+    bindSelect('exhalePitch', S.exhalePitch, v => { S.exhalePitch = parseInt(v, 10) || 0; });
+    document.querySelectorAll('[data-preview]').forEach(b => b.addEventListener('click', () => previewCue(b.dataset.preview)));
     bindSelect('bowlInterval', S.bowlInterval, v => { S.bowlInterval = v; });
     bindSelect('sleepTimer', S.timerMinutes, v => { S.timerMinutes = parseInt(v, 10) || 0; armTimer(); updatePills(); });
 
