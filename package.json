@@ -2,6 +2,8 @@
   "name": "hr-breath-pacer",
   "private": true,
   "version": "1.0.0",
+  "license": "MIT",
+  "author": "Maciej Biel",
   "type": "module",
   "scripts": {
     "dev": "vite",
