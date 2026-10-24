@@ -1,0 +1,758 @@
+/* HR Breath Pacer — a night instrument.
+   One loud element (the breath light); everything else stays low and recedes. */
+:root {
+  --ink: #0a1122; /* deep night blue, the page */
+  --ink-raised: #10192f; /* settings sheet */
+  --line: #1d2945; /* hairlines */
+  --line-strong: #2b3a5e;
+  --moon: #c6cfe0; /* primary text — never pure white in the dark */
+  --moon-dim: #8592ad;
+  --moon-faint: #556180;
+  --dawn: #e9b47f; /* inhale */
+  --dusk: #7ea3d4; /* exhale, and the music tempo */
+  --heart: #d88a96; /* heart rate */
+  --danger: #e08a7a;
+
+  --serif: 'Fraunces Variable', Georgia, serif;
+  --sans: 'Figtree Variable', system-ui, sans-serif;
+
+  /* type scale */
+  --t-xs: 12px;
+  --t-sm: 14px;
+  --t-md: 16px;
+  --t-lg: 20px;
+  --t-xl: 28px;
+  --t-num: clamp(44px, 9vw, 72px);
+
+  --radius-s: 8px;
+  --radius-l: 20px;
+  --gutter: clamp(16px, 4vw, 40px);
+
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--moon);
+}
+body {
+  font-family: var(--sans);
+  font-size: var(--t-md);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+:focus-visible {
+  outline: 2px solid var(--dawn);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+/* ---------------------------------------------------------------- layout
+   Everything fits one screen: the breath light takes whatever height is left. */
+.sky {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  z-index: 0;
+  display: block;
+}
+.sky-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 55% 45% at 50% 38%, rgb(10 17 34 / 0.6) 0%, rgb(10 17 34 / 0.25) 55%, transparent 80%),
+    linear-gradient(to top, rgb(10 17 34 / 0.8) 0%, rgb(10 17 34 / 0.4) 28%, transparent 50%);
+}
+.app {
+  position: relative;
+  z-index: 1;
+  height: 100dvh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.main {
+  height: 100dvh;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  padding: max(12px, env(safe-area-inset-top)) var(--gutter) max(12px, env(safe-area-inset-bottom));
+}
+.main > * {
+  min-width: 0;
+}
+/* text sitting on the sky keeps a soft dark halo for legibility */
+.topbar,
+.gap,
+.meta,
+.trend-head {
+  text-shadow: 0 1px 14px rgb(6 10 22 / 0.9);
+}
+
+/* glass: the sky shows through, blurred */
+.glass {
+  background: rgb(14 22 42 / 0.5);
+  -webkit-backdrop-filter: blur(20px) saturate(1.25);
+  backdrop-filter: blur(20px) saturate(1.25);
+}
+
+.dock {
+  width: 400px;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: rgb(14 22 42 / 0.5);
+  -webkit-backdrop-filter: blur(22px) saturate(1.25);
+  backdrop-filter: blur(22px) saturate(1.25);
+  border-left: 1px solid rgb(198 207 224 / 0.07);
+}
+.dock .sheet-head h2 {
+  font-family: var(--serif);
+  font-variation-settings: 'SOFT' 100, 'opsz' 24;
+  font-weight: 400;
+  font-size: var(--t-xl);
+  margin: 0;
+}
+.chrome {
+  transition: opacity 1.6s ease;
+}
+.app[data-dim='true'] .chrome {
+  opacity: 0.07;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px 20px;
+  flex-wrap: wrap;
+  /* room between the title and the breath light */
+  padding: 8px 0 clamp(16px, 4.5vh, 44px);
+}
+.wordmark {
+  font-family: var(--serif);
+  font-variation-settings: 'SOFT' 100, 'opsz' 24;
+  font-weight: 400;
+  font-size: var(--t-lg);
+  letter-spacing: 0.01em;
+  margin: 0;
+  color: var(--moon);
+}
+.status {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  flex: 1;
+  font-size: var(--t-sm);
+  color: var(--moon-dim);
+}
+.status span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--moon-faint);
+  flex: none;
+}
+.dot.ok {
+  background: #8fc6a4;
+}
+.dot.warn {
+  background: var(--dawn);
+}
+.dot.bad {
+  background: var(--danger);
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgb(10 17 34 / 0.35);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: var(--t-sm);
+  color: var(--moon);
+  cursor: pointer;
+}
+.icon-btn:hover {
+  border-color: var(--moon-faint);
+}
+
+/* ---------------------------------------------------------------- stage */
+.stage {
+  position: relative;
+  min-height: 0;
+}
+.stage canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* heart ↔ music: the gap between the two tempos is the idea of the app */
+/* heart | chart | music. The readings have fixed-width columns so the layout never shifts
+   when a number changes; they share the chart's colours and so act as its legend. */
+.gap {
+  --reading-w: clamp(66px, 11vw, 140px);
+  display: grid;
+  grid-template-columns: var(--reading-w) minmax(0, 1fr) var(--reading-w);
+  align-items: center;
+  gap: clamp(10px, 2.5vw, 28px);
+  padding: 8px 0 4px;
+}
+.reading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: var(--reading-w);
+}
+.reading.right {
+  align-items: flex-end;
+  text-align: right;
+}
+.reading .num {
+  font-family: var(--serif);
+  font-variation-settings: 'SOFT' 100, 'opsz' 72;
+  font-weight: 300;
+  font-size: clamp(36px, 6vw, 72px);
+  line-height: 1;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.reading.heart .num {
+  color: var(--heart);
+}
+.reading.music .num {
+  color: var(--dusk);
+}
+.reading .what {
+  font-size: var(--t-sm);
+  color: var(--moon-dim);
+}
+.reading .sub {
+  font-size: var(--t-xs);
+  color: var(--moon-faint);
+}
+@media (max-width: 640px) {
+  .gap {
+    gap: 10px;
+  }
+  .status {
+    order: 3;
+    flex-basis: 100%;
+  }
+  .wordmark {
+    flex: 1;
+  }
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  /* breathing room between the chart and the button */
+  padding: clamp(20px, 4vh, 40px) 0 4px;
+}
+.start {
+  min-width: 200px;
+  padding: 14px 32px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--dawn) 60%, var(--ink));
+  background: rgb(10 17 34 / 0.35);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  color: var(--dawn);
+  font-size: var(--t-lg);
+  font-family: var(--serif);
+  font-variation-settings: 'SOFT' 100, 'opsz' 24;
+  cursor: pointer;
+  transition: background 0.3s, border-color 0.3s, color 0.3s;
+}
+.start:hover:not(:disabled) {
+  border-color: var(--dawn);
+}
+.start[data-running='true'] {
+  color: var(--dusk);
+  border-color: color-mix(in srgb, var(--dusk) 45%, var(--ink));
+}
+.start[data-running='true']:hover:not(:disabled) {
+  border-color: var(--dusk);
+}
+.start:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+/* warm-up loader in the shape of the start button: fills with dawn light as readings arrive */
+.start.sync {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  cursor: default;
+  color: var(--moon);
+}
+.sync-fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  transform: scaleX(var(--p, 0));
+  background: linear-gradient(90deg, color-mix(in srgb, var(--dawn) 14%, transparent), color-mix(in srgb, var(--dawn) 34%, transparent));
+  transition: transform 0.9s cubic-bezier(0.3, 0.7, 0.3, 1);
+}
+/* a slow sheen so it reads as "working" even between readings */
+.sync-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.12), transparent);
+  animation: sync-sheen 1.8s ease-in-out infinite;
+}
+@keyframes sync-sheen {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+.sync-label {
+  position: relative;
+  font-size: var(--t-md);
+  font-variant-numeric: tabular-nums;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sync-fill,
+  .sync-fill::after {
+    transition: none;
+    animation: none;
+  }
+}
+
+/* secondary action next to the main button: text only */
+.link-btn {
+  background: none;
+  border: 0;
+  padding: 4px 8px;
+  font-size: var(--t-sm);
+  color: var(--moon-dim);
+  text-decoration: underline;
+  text-decoration-color: var(--moon-faint);
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+.link-btn:hover {
+  color: var(--moon);
+}
+.meta {
+  font-size: var(--t-sm);
+  color: var(--moon-dim);
+  min-height: 1.5em;
+  text-align: center;
+  max-width: 60ch;
+}
+.meta.error {
+  color: var(--danger);
+}
+
+/* ---------------------------------------------------------------- chart */
+.trend {
+  min-width: 0;
+}
+.trend-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: var(--t-sm);
+  color: var(--moon-dim);
+  margin-bottom: 4px;
+}
+.trend-head .caption {
+  flex: 1;
+  min-width: 0;
+}
+.trend canvas {
+  display: block;
+  width: 100%;
+  height: clamp(72px, 12vh, 120px);
+}
+@media (max-width: 640px) {
+  .trend-head {
+    font-size: var(--t-xs);
+    text-align: center;
+  }
+  /* phones keep the 5-minute view; the caption needs the width */
+  .trend-head .seg {
+    display: none;
+  }
+}
+.seg {
+  flex: none;
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px;
+}
+.seg button {
+  background: none;
+  border: 0;
+  border-radius: 999px;
+  padding: 3px 12px;
+  font-size: var(--t-xs);
+  color: var(--moon-dim);
+  cursor: pointer;
+}
+.seg button[aria-pressed='true'] {
+  background: var(--line);
+  color: var(--moon);
+}
+
+/* ---------------------------------------------------------------- settings sheet */
+.overlay {
+  z-index: 10;
+  position: fixed;
+  inset: 0;
+  background: rgb(4 8 18 / 0.55);
+  backdrop-filter: blur(2px);
+}
+.sheet {
+  z-index: 11;
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(440px, 100vw);
+  background: rgb(14 22 42 / 0.72);
+  -webkit-backdrop-filter: blur(24px) saturate(1.25);
+  backdrop-filter: blur(24px) saturate(1.25);
+  border-left: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  outline: none;
+}
+.sheet[data-state='open'] {
+  animation: sheet-in 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes sheet-in {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+@media (max-width: 640px) {
+  .sheet {
+    top: auto;
+    left: 0;
+    width: 100vw;
+    max-height: 88dvh;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+    border-radius: var(--radius-l) var(--radius-l) 0 0;
+  }
+  @keyframes sheet-in {
+    from {
+      transform: translateY(32px);
+      opacity: 0;
+    }
+  }
+}
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px 8px;
+}
+.sheet-head h2 {
+  font-family: var(--serif);
+  font-variation-settings: 'SOFT' 100, 'opsz' 24;
+  font-weight: 400;
+  font-size: var(--t-xl);
+  margin: 0;
+}
+.close {
+  background: none;
+  border: 0;
+  color: var(--moon-dim);
+  font-size: var(--t-sm);
+  cursor: pointer;
+  padding: 8px;
+}
+
+.tabs-list {
+  display: flex;
+  gap: 4px;
+  padding: 4px 16px 0;
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+}
+.tab {
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 10px 10px 9px;
+  color: var(--moon-dim);
+  font-size: var(--t-md);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.tab[data-state='active'] {
+  color: var(--moon);
+  border-bottom-color: var(--dawn);
+}
+.tab-panel {
+  overflow-y: auto;
+  padding: 4px 20px 32px;
+  flex: 1;
+}
+
+.group {
+  padding: 16px 0 8px;
+}
+.group + .group {
+  border-top: 1px solid var(--line);
+}
+.group h3 {
+  font-size: var(--t-md);
+  font-weight: 600;
+  margin: 0 0 4px;
+  color: var(--moon);
+}
+.group > p {
+  font-size: var(--t-sm);
+  color: var(--moon-dim);
+  margin: 0 0 10px;
+  max-width: 60ch;
+}
+
+.field {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 10px 0;
+}
+.field-label {
+  font-size: var(--t-sm);
+  color: var(--moon);
+}
+.field-value {
+  font-size: var(--t-sm);
+  color: var(--moon-dim);
+  font-variant-numeric: tabular-nums;
+}
+.field-control {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* slider */
+.slider {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  height: 28px;
+  touch-action: none;
+  user-select: none;
+}
+.slider-track {
+  position: relative;
+  flex: 1;
+  height: 3px;
+  background: var(--line-strong);
+  border-radius: 2px;
+}
+.slider-range {
+  position: absolute;
+  height: 100%;
+  background: var(--moon-dim);
+  border-radius: 2px;
+}
+.slider-thumb {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--moon);
+  border: 3px solid var(--ink-raised);
+  box-shadow: 0 0 0 1px var(--moon-dim);
+  cursor: grab;
+}
+
+/* select */
+.select-trigger {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 12px;
+  background: var(--ink);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-s);
+  font-size: var(--t-sm);
+  cursor: pointer;
+  text-align: left;
+}
+.select-content {
+  background: var(--ink-raised);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-s);
+  padding: 4px;
+  z-index: 50;
+  max-height: var(--radix-select-content-available-height);
+  min-width: var(--radix-select-trigger-width);
+}
+.select-item {
+  padding: 8px 10px 8px 28px;
+  border-radius: 6px;
+  font-size: var(--t-sm);
+  cursor: pointer;
+  position: relative;
+  outline: none;
+}
+.select-item[data-highlighted] {
+  background: var(--line);
+}
+.select-item[data-state='checked']::before {
+  content: '';
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border-radius: 50%;
+  background: var(--dawn);
+}
+
+/* switch */
+.switch {
+  width: 42px;
+  height: 24px;
+  /* no browser button padding, thumb centred vertically: 2px gap all round */
+  padding: 0 0 0 1px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: var(--ink);
+  position: relative;
+  cursor: pointer;
+  flex: none;
+}
+.switch[data-state='checked'] {
+  background: color-mix(in srgb, var(--dawn) 30%, var(--ink));
+  border-color: var(--dawn);
+}
+.switch-thumb {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--moon);
+  transform: translateX(1px);
+  transition: transform 0.2s;
+}
+.switch-thumb[data-state='checked'] {
+  transform: translateX(19px);
+}
+
+.play {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  background: none;
+  color: var(--dawn);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.play:hover {
+  border-color: var(--dawn);
+}
+.btn {
+  background: none;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-s);
+  padding: 9px 14px;
+  font-size: var(--t-sm);
+  cursor: pointer;
+}
+.btn:hover:not(:disabled) {
+  border-color: var(--moon-faint);
+}
+.btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.btn.accent {
+  border-color: color-mix(in srgb, var(--dawn) 50%, transparent);
+  color: var(--dawn);
+}
+.btn-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 6px 0;
+}
+.note {
+  font-size: var(--t-sm);
+  color: var(--moon-dim);
+  margin: 6px 0;
+  max-width: 60ch;
+}
+.note.warn {
+  color: var(--dawn);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chrome,
+  .sheet[data-state='open'],
+  .switch-thumb {
+    transition: none;
+    animation: none;
+  }
+}
