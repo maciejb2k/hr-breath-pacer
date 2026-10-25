@@ -208,6 +208,25 @@ select {
 .icon-btn:hover {
   border-color: var(--moon-faint);
 }
+/* the smallest phones: Settings becomes its icon alone, so the title keeps to one line */
+@media (max-width: 379px) {
+  .settings-label {
+    display: none;
+  }
+  .settings-btn {
+    padding: 7px 10px;
+  }
+}
+/* language menu in the settings heading: just the globe and a two-letter code */
+.lang-btn {
+  gap: 6px;
+  padding: 7px 10px 7px 12px;
+  color: var(--moon-dim);
+}
+.lang-btn:hover,
+.lang-btn[data-state='open'] {
+  color: var(--moon);
+}
 
 /* ---------------------------------------------------------------- stage */
 .stage {
@@ -436,7 +455,8 @@ select {
   font-size: var(--t-xs);
   color: var(--moon-faint);
   max-width: none;
-  text-wrap: balance;
+  /* lines run the full width; only a lone last word is avoided */
+  text-wrap: pretty;
 }
 .credit {
   color: var(--moon-dim);
@@ -557,6 +577,11 @@ select {
   font-weight: 400;
   font-size: var(--t-xl);
   margin: 0;
+}
+.sheet-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 .close {
   background: none;

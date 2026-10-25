@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { vis } from '../core/visual';
+import { t } from '../i18n';
 import { fitCanvas, mix } from './canvas';
 
 // A light that rises and warms on the inhale (dawn) and sinks and cools on the exhale (dusk),
@@ -196,14 +197,16 @@ export function BreathLight({ running, units }: { running: boolean; units: [numb
       // so on sharper phone screens canvas text came out soft next to the HTML readings.
       const left = Math.max(1, Math.ceil(phaseLeftMs / 1000));
       const size = Math.round(Math.min(40, Math.max(24, trackR * 0.17)));
-      const key = `${phase}|${left}|${live}|${inU}:${outU}|${Math.round(cy)}|${Math.round(trackR)}|${Math.round(H)}|${size}`;
+      const wordText = `${t(phase === 'in' ? 'light.inhale' : 'light.exhale')} ${left}`;
+      const subText = live ? '' : t('light.preview', { in: inU, out: outU });
+      const key = `${wordText}|${subText}|${live}|${Math.round(cy)}|${Math.round(trackR)}|${Math.round(H)}|${size}`;
       if (key !== shown) {
         shown = key;
         label.dataset.phase = phase;
         label.dataset.live = String(live);
         word.style.fontSize = `${size}px`;
-        word.textContent = `${phase === 'in' ? 'Inhale' : 'Exhale'} ${left}`;
-        sub.textContent = live ? '' : `Rhythm preview ${inU} : ${outU}`;
+        word.textContent = wordText;
+        sub.textContent = subText;
         // optically centred between the track and the charts under the stage: the gap from the
         // track to the tops of the letters equals the gap from the last baseline to the charts' letters
         // (text boxes carry empty leading, so centring the boxes left the top looking cramped)
@@ -223,7 +226,7 @@ export function BreathLight({ running, units }: { running: boolean; units: [numb
 
   return (
     <>
-      <canvas ref={ref} role="img" aria-label="Breath light: grows as you breathe in, shrinks as you breathe out" />
+      <canvas ref={ref} role="img" aria-label={t('light.aria')} />
       <div ref={labelRef} className="phase-label" aria-hidden>
         <span className="phase-word" />
         <span className="phase-sub" />

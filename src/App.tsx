@@ -5,6 +5,7 @@ import { BreathLight } from './components/BreathLight';
 import { NightSky } from './components/NightSky';
 import { SettingsDock, SettingsSheet } from './components/SettingsSheet';
 import { Trend } from './components/Trend';
+import { t } from './i18n';
 import { breathUnits } from './core/settings';
 
 const DIM_AFTER_MS = 10000;
@@ -19,38 +20,34 @@ function clock(ms: number) {
 
 function SourceStatus({ snap }: { snap: Snapshot }) {
   const { sim, ble } = snap;
-  if (sim.enabled) return <span><i className="dot warn" />Simulated heart rate</span>;
+  if (sim.enabled) return <span><i className="dot warn" />{t('status.sim')}</span>;
   if (ble.state === 'connected') {
     return ble.stale
-      ? <span><i className="dot warn" />{ble.deviceName}: no new readings</span>
+      ? <span><i className="dot warn" />{t('status.stale', { name: ble.deviceName })}</span>
       : <span><i className="dot ok" />{ble.deviceName}</span>;
   }
-  if (ble.state === 'nocontact') return <span><i className="dot warn" />{ble.deviceName}: sensor not touching your skin</span>;
-  if (ble.state === 'reconnecting') return <span><i className="dot bad" />Reconnecting to the smartwatch</span>;
-  if (ble.state === 'connecting') return <span><i className="dot warn" />Connecting to the smartwatch</span>;
-  return <span><i className="dot" />No heart rate source</span>;
+  if (ble.state === 'nocontact') return <span><i className="dot warn" />{t('status.nocontact', { name: ble.deviceName })}</span>;
+  if (ble.state === 'reconnecting') return <span><i className="dot bad" />{t('status.reconnecting')}</span>;
+  if (ble.state === 'connecting') return <span><i className="dot warn" />{t('status.connecting')}</span>;
+  return <span><i className="dot" />{t('status.none')}</span>;
 }
 
 /** nothing connected yet: the status line explains what's needed, signed by the author */
 const awaitingSource = (snap: Snapshot) => !snap.message && !snap.running && !snap.sim.enabled && snap.ble.state === 'off';
 
 function sessionLine(snap: Snapshot) {
-  if (snap.message) return snap.message.text;
+  if (snap.message) return t(snap.message.key, snap.message.vars);
   if (awaitingSource(snap)) {
-    return snap.ble.supported
-      ? 'Your smartwatch or chest strap must share heart rate over Bluetooth (the standard Heart Rate profile).'
-      : snap.ble.reason;
+    if (snap.ble.supported) return t('line.needSource');
+    return snap.ble.reason ? t(snap.ble.reason.key, snap.ble.reason.vars) : '';
   }
-  if (!snap.running && !snap.sync.ready) {
-    if (snap.ble.state === 'nocontact') return 'The smartwatch can’t feel your pulse. Wear it a little tighter, sensor against your skin.';
-    return 'One moment while your heart rate settles, so the music starts at the right tempo.';
-  }
+  if (!snap.running && !snap.sync.ready) return t(snap.ble.state === 'nocontact' ? 'line.nocontact' : 'line.settling');
   if (!snap.running || !snap.sessionStart) return '';
-  let line = `Session running for ${clock(snap.now - snap.sessionStart)}`;
+  let line = t('line.running', { time: clock(snap.now - snap.sessionStart) });
   if (snap.sessionStartHR != null && snap.smoothedHR != null) {
     const d = Math.round(snap.smoothedHR - snap.sessionStartHR);
-    if (d < 0) line += `, heart rate down ${-d}`;
-    else if (d > 0) line += `, heart rate up ${d}`;
+    if (d < 0) line += t('line.hrDown', { n: -d });
+    else if (d > 0) line += t('line.hrUp', { n: d });
   }
   return line + '.';
 }
@@ -118,10 +115,10 @@ export default function App() {
   const warming = !snap.running && hasSource && !snap.sync.ready;
   const heart = snap.smoothedHR;
   const music = snap.musicBPM ?? snap.targetBPM;
-  let bridge = 'Heart rate and music tempo';
+  let bridge = t('gap.caption');
   if (heart != null && music != null) {
     const diff = Math.round(heart - music);
-    bridge = diff >= 1 ? `music is ${diff} BPM slower than your heart` : 'music in step with your heart';
+    bridge = diff >= 1 ? t('gap.slower', { n: diff }) : t('gap.inStep');
   }
 
   return (
@@ -132,15 +129,15 @@ export default function App() {
       <header className="topbar chrome">
         <h1 className="wordmark">
           <Heartbeat className="wordmark-icon" size={26} weight="light" aria-hidden />
-          HR Breath Pacer
+          {t('app.title')}
         </h1>
         <div className="status" aria-live="polite">
           <SourceStatus snap={snap} />
-          {snap.running && snap.timer.endAt != null && <span>Ends in {clock(snap.timer.endAt - snap.now)}</span>}
+          {snap.running && snap.timer.endAt != null && <span>{t('status.endsIn', { time: clock(snap.timer.endAt - snap.now) })}</span>}
         </div>
-        <button className="icon-btn" onClick={() => setSettingsOpen(true)} hidden={docked}>
+        <button className="icon-btn settings-btn" onClick={() => setSettingsOpen(true)} hidden={docked} aria-label={t('app.settings')}>
           <SlidersHorizontal size={16} weight="regular" aria-hidden />
-          Settings
+          <span className="settings-label">{t('app.settings')}</span>
         </button>
       </header>
 
@@ -152,19 +149,19 @@ export default function App() {
       </main>
 
       <div className="chrome">
-        <section className="gap" aria-label="Heart rate and music tempo">
+        <section className="gap" aria-label={t('gap.aria')}>
           <div className="reading heart">
-            <span className="what">heart</span>
+            <span className="what">{t('gap.heart')}</span>
             <span className="num">{heart == null ? '–' : Math.round(heart)}</span>
             <span className="sub">
-              {snap.rawHR != null && heart != null && snap.rawHR !== Math.round(heart) ? `now ${snap.rawHR}` : ' '}
+              {snap.rawHR != null && heart != null && snap.rawHR !== Math.round(heart) ? t('gap.now', { n: snap.rawHR }) : ' '}
             </span>
           </div>
-          <Trend sessionStart={snap.sessionStart} running={snap.running} caption={bridge} />
+          <Trend sessionStart={snap.sessionStart} running={snap.running} caption={bridge} lang={snap.settings.lang} />
           <div className="reading music right">
-            <span className="what">music</span>
+            <span className="what">{t('gap.music')}</span>
             <span className="num">{music == null ? '–' : Math.round(music)}</span>
-            <span className="sub idle-hint">{snap.running ? ' ' : 'plays once you start'}</span>
+            <span className="sub idle-hint">{snap.running ? ' ' : t('gap.playsOnStart')}</span>
           </div>
         </section>
 
@@ -174,14 +171,14 @@ export default function App() {
             <>
               {snap.ble.supported && (
                 <button className="start" disabled={connecting} onClick={() => controller.connectBle()}>
-                  {connecting ? 'Connecting to the smartwatch…' : 'Connect your smartwatch'}
+                  {t(connecting ? 'controls.connecting' : 'controls.connect')}
                 </button>
               )}
               <button
                 className={snap.ble.supported ? 'link-btn' : 'start'}
                 onClick={() => controller.setSim(true)}
               >
-                {snap.ble.supported ? 'No smartwatch? Simulate a heart rate' : 'Simulate a heart rate'}
+                {t(snap.ble.supported ? 'controls.simAlt' : 'controls.sim')}
               </button>
             </>
           ) : warming ? (
@@ -197,10 +194,10 @@ export default function App() {
               <span className="sync-fill" aria-hidden />
               <span className="sync-label">
                 {snap.ble.state === 'connecting' || snap.ble.state === 'reconnecting'
-                  ? 'Connecting to the smartwatch…'
+                  ? t('controls.connecting')
                   : snap.ble.state === 'nocontact'
-                    ? 'Waiting for a heart rate…'
-                    : `Syncing heart rate ${snap.sync.count} / ${snap.sync.needed}`}
+                    ? t('controls.waitingHR')
+                    : t('controls.syncing', { count: snap.sync.count, needed: snap.sync.needed })}
               </span>
             </div>
           ) : (
@@ -210,11 +207,11 @@ export default function App() {
               disabled={snap.starting}
               onClick={() => controller.toggle()}
             >
-              {snap.running ? 'End session' : snap.starting ? 'Starting…' : 'Start session'}
+              {t(snap.running ? 'controls.end' : snap.starting ? 'controls.starting' : 'controls.start')}
             </button>
           )}
           <p className={`meta${snap.message?.error ? ' error' : ''}${awaitingSource(snap) ? ' quiet' : ''}`} role="status">
-            {awaitingSource(snap) && <span className="credit">Maciej Biel 2026 · </span>}
+            {awaitingSource(snap) && <span className="credit">{t('app.credit')} · </span>}
             {sessionLine(snap)}
           </p>
         </div>

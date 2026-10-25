@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { controller } from '../core/controller';
+import { t, type Lang } from '../i18n';
 import { fitCanvas } from './canvas';
 
 type Range = '5' | 'session';
@@ -8,7 +9,7 @@ type Range = '5' | 'session';
  * Heart rate (pink) and music tempo (blue) over time. It sits between the two readings,
  * which share its colours — so the numbers on either side double as its legend.
  */
-export function Trend({ sessionStart, running, caption }: { sessionStart: number | null; running: boolean; caption: string }) {
+export function Trend({ sessionStart, running, caption, lang }: { sessionStart: number | null; running: boolean; caption: string; lang: Lang }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const [range, setRange] = useState<Range>('5');
 
@@ -83,13 +84,13 @@ export function Trend({ sessionStart, running, caption }: { sessionStart: number
       const ticks = Math.floor(span / (tickMin * 60000));
       const every = Math.max(1, Math.ceil((ticks * 52) / pw));
       for (let k = 0; k <= ticks; k += every) {
-        const t = t1 - k * tickMin * 60000;
-        g.fillText(k === 0 ? 'now' : `−${k * tickMin} min`, Math.min(W - R - 16, Math.max(L + 16, x(t))), H - B + 4);
+        const at = t1 - k * tickMin * 60000;
+        g.fillText(k === 0 ? t('trend.nowTick') : t('trend.minTick', { n: k * tickMin }), Math.min(W - R - 16, Math.max(L + 16, x(at))), H - B + 4);
       }
 
       if (!data.length) {
         g.textBaseline = 'middle';
-        const empty = all.length ? 'No readings in the last 5 minutes' : 'Waiting for the first heart rate reading';
+        const empty = t(all.length ? 'trend.noRecent' : 'trend.waiting');
         // only when it fits: on a narrow phone chart the line would run past the edges
         if (g.measureText(empty).width <= pw - 16) g.fillText(empty, L + pw / 2, T + ph / 2);
         return;
@@ -131,22 +132,22 @@ export function Trend({ sessionStart, running, caption }: { sessionStart: number
       window.clearInterval(id);
       window.removeEventListener('resize', draw);
     };
-  }, [range, running, sessionStart]);
+  }, [range, running, sessionStart, lang]); // lang: redraw the labels at once when it changes
 
   return (
     <div className="trend">
       <div className="trend-head">
         <span className="caption">{caption}</span>
-        <span className="seg" role="group" aria-label="Chart range">
+        <span className="seg" role="group" aria-label={t('trend.range')}>
           <button aria-pressed={range === '5'} onClick={() => setRange('5')}>
-            5 min
+            {t('trend.5min')}
           </button>
           <button aria-pressed={range === 'session'} onClick={() => setRange('session')}>
-            session
+            {t('trend.session')}
           </button>
         </span>
       </div>
-      <canvas ref={ref} role="img" aria-label="Chart: heart rate in pink, music tempo in blue" />
+      <canvas ref={ref} role="img" aria-label={t('trend.aria')} />
     </div>
   );
 }

@@ -1,9 +1,11 @@
+import type { Key, Vars } from '../i18n';
+
 export type BleState = 'off' | 'connecting' | 'connected' | 'nocontact' | 'reconnecting';
 
 export interface BleSupport {
   ok: boolean;
-  /** why Web Bluetooth is unavailable, written for the user */
-  reason?: string;
+  /** why Web Bluetooth is unavailable, as a message for the user */
+  reason?: { key: Key; vars?: Vars };
 }
 
 /** Explains *why* Web Bluetooth is missing, so the user knows what to fix. */
@@ -12,18 +14,18 @@ export function bleSupport(): BleSupport {
   if (!window.isSecureContext) {
     return {
       ok: false,
-      reason: `This page is open over plain http (${location.host}). Bluetooth only works over https or on localhost: open the address that starts with https://.`,
+      reason: { key: 'ble.insecure', vars: { host: location.host } },
     };
   }
   if ((navigator as Navigator & { brave?: unknown }).brave) {
     return {
       ok: false,
-      reason: 'Brave turns Bluetooth off by default. Go to brave://flags, enable “Web Bluetooth API” and restart the browser, or open this page in Chrome.',
+      reason: { key: 'ble.brave' },
     };
   }
   return {
     ok: false,
-    reason: 'This browser doesn’t support Bluetooth on web pages. Use Chrome or Edge (Windows, macOS, Android). iPhones don’t support it.',
+    reason: { key: 'ble.unsupported' },
   };
 }
 

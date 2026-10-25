@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { AudioEngine, type PreviewKind } from './audioEngine';
-import { HeartRateBle, bleSupport, type BleState } from './heartRateBle';
+import { HeartRateBle, bleSupport, type BleState, type BleSupport } from './heartRateBle';
+import { setLang, type Key, type Vars } from '../i18n';
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, type AudioQuality, type Settings, type VolumeKey } from './settings';
 
 const DEFAULT_BPM = 60;
@@ -17,6 +18,12 @@ export interface HistoryPoint {
   bpm: number | null;
 }
 
+export interface Message {
+  key: Key;
+  vars?: Vars;
+  error?: boolean;
+}
+
 export interface Snapshot {
   settings: Settings;
   running: boolean;
@@ -31,12 +38,13 @@ export interface Snapshot {
   sessionStartHR: number | null;
   chord: string | null;
   sim: { enabled: boolean; value: number; asleepProgress: number | null };
-  ble: { supported: boolean; reason?: string; state: BleState; deviceName: string; retryIn: number; stale: boolean };
+  ble: { supported: boolean; reason?: BleSupport['reason']; state: BleState; deviceName: string; retryIn: number; stale: boolean };
   wakeLock: 'active' | 'inactive' | 'unsupported';
   timer: { endAt: number | null; fading: boolean };
   /** heart-rate source warm-up: readings received so far / needed; ready = a session may start */
   sync: { count: number; needed: number; ready: boolean };
-  message: { text: string; error?: boolean } | null;
+  /** a one-off message for the status line, translated when shown */
+  message: Message | null;
   now: number;
 }
 
@@ -79,6 +87,7 @@ class Controller {
   private snap: Snapshot;
 
   constructor() {
+    setLang(this.s.lang);
     this.engine.onChord = (name) => {
       this.chord = name;
       this.emit();
@@ -147,8 +156,8 @@ class Controller {
     };
   }
 
-  private say(text: string, error = false) {
-    this.message = { text, error };
+  private say(key: Key, vars?: Vars, error = false) {
+    this.message = { key, vars, error };
     this.emit();
   }
 
@@ -157,6 +166,7 @@ class Controller {
     this.s = { ...this.s, ...patch };
     saveSettings(this.s);
     if ('timerMinutes' in patch) this.armTimer();
+    if (patch.lang) setLang(patch.lang);
     this.emit();
   }
   setVolume(key: VolumeKey, db: number) {
@@ -169,7 +179,8 @@ class Controller {
   /** restores the listed settings to their defaults, or every setting when none are given */
   reset(keys?: (keyof Settings)[]) {
     const defaults = structuredClone(DEFAULT_SETTINGS);
-    const patch = keys ? Object.fromEntries(keys.map((k) => [k, defaults[k]])) : defaults;
+    // the language is the viewer's, not a tuning setting: a full reset keeps it
+    const patch = keys ? Object.fromEntries(keys.map((k) => [k, defaults[k]])) : { ...defaults, lang: this.s.lang };
     this.s = { ...this.s, ...patch };
     saveSettings(this.s);
     if ('vols' in patch) (Object.keys(this.s.vols) as VolumeKey[]).forEach((k) => this.engine.setVolume(k, this.s.vols[k]));
@@ -214,7 +225,7 @@ class Controller {
   async start() {
     if (this.running || this.starting) return;
     this.starting = true;
-    this.say('Preparing the sound…');
+    this.say('msg.preparing');
     try {
       await this.engine.start();
       this.running = true;
@@ -224,11 +235,11 @@ class Controller {
       await this.requestWakeLock();
       this.message =
         this.smoothedHR == null
-          ? { text: `No heart rate yet: the music plays at ${DEFAULT_BPM} BPM until the first reading arrives.` }
+          ? { key: 'msg.noHR', vars: { bpm: DEFAULT_BPM } }
           : null;
     } catch (err) {
       console.warn(err);
-      this.message = { text: 'Couldn’t start the sound: ' + ((err as Error)?.message ?? err), error: true };
+      this.message = { key: 'msg.startFailed', vars: { error: String((err as Error)?.message ?? err) }, error: true };
     } finally {
       this.starting = false;
       this.emit();
@@ -241,7 +252,7 @@ class Controller {
     this.running = false;
     this.timer = { endAt: null, fading: false };
     this.releaseWakeLock();
-    this.message = reason === 'timer' ? { text: 'The sleep timer ended the session.' } : null;
+    this.message = reason === 'timer' ? { key: 'msg.timerEnded' } : null;
     this.emit();
   }
 
@@ -250,7 +261,7 @@ class Controller {
       await this.engine.preview(kind);
     } catch (err) {
       console.warn(err);
-      this.say('Couldn’t play the sound: ' + ((err as Error)?.message ?? err), true);
+      this.say('msg.playFailed', { error: String((err as Error)?.message ?? err) }, true);
     }
   }
 
@@ -272,7 +283,7 @@ class Controller {
       const e = err as DOMException;
       if (e?.name === 'NotFoundError') return; // user closed the picker
       console.warn(err);
-      this.say('Couldn’t connect to the smartwatch: ' + (e?.message ?? err), true);
+      this.say('msg.connectFailed', { error: String(e?.message ?? err) }, true);
     }
   }
   disconnectBle() {

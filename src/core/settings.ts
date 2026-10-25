@@ -1,3 +1,5 @@
+import { browserLang, type Lang } from '../i18n';
+
 export type BreathMode = 'sync' | 'fixed';
 export type BreathPattern = '4:6' | '4:7' | '4:8' | 'prog';
 export type CueKind = 'ping' | 'double' | 'kalimba' | 'glass' | 'bowl' | 'wood' | 'gong' | 'deep' | 'glide' | 'none';
@@ -37,6 +39,8 @@ export interface Settings {
   autoDim: boolean;
   /** lower = lighter on the audio thread, against crackling on phones */
   audioQuality: AudioQuality;
+  /** interface language; Reset all leaves it alone */
+  lang: Lang;
   vols: Record<VolumeKey, number>;
 }
 
@@ -60,6 +64,7 @@ export const DEFAULT_SETTINGS: Settings = {
   skyGlow: 0.6,
   autoDim: false,
   audioQuality: isPhone ? 'low' : 'high',
+  lang: browserLang(),
   vols: { drone: -2, heart: -6, bowl: -25, breath: 0, cues: -6, inhale: -6, inhaleTex: -6, exhaleTex: -6, master: 0 },
 };
 
