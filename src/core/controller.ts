@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { AudioEngine, type PreviewKind } from './audioEngine';
 import { HeartRateBle, bleSupport, type BleState } from './heartRateBle';
-import { loadSettings, saveSettings, type Settings, type VolumeKey } from './settings';
+import { DEFAULT_SETTINGS, loadSettings, saveSettings, type Settings, type VolumeKey } from './settings';
 
 const DEFAULT_BPM = 60;
 const SIM_ASLEEP_MS = 180000; // 80 → 55 BPM in 3 minutes
@@ -160,6 +160,17 @@ class Controller {
     this.s = { ...this.s, vols: { ...this.s.vols, [key]: db } };
     saveSettings(this.s);
     this.engine.setVolume(key, db);
+    this.emit();
+  }
+
+  /** restores the listed settings to their defaults, or every setting when none are given */
+  reset(keys?: (keyof Settings)[]) {
+    const defaults = structuredClone(DEFAULT_SETTINGS);
+    const patch = keys ? Object.fromEntries(keys.map((k) => [k, defaults[k]])) : defaults;
+    this.s = { ...this.s, ...patch };
+    saveSettings(this.s);
+    if ('vols' in patch) (Object.keys(this.s.vols) as VolumeKey[]).forEach((k) => this.engine.setVolume(k, this.s.vols[k]));
+    if ('timerMinutes' in patch) this.armTimer();
     this.emit();
   }
 

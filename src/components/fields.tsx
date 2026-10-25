@@ -109,3 +109,26 @@ export function PlayButton({ label, onClick }: { label: string; onClick: () => v
     </button>
   );
 }
+
+/** A group's heading with room on the right for the group's own actions. */
+export function GroupHead({ title, children }: { title: string; children?: ReactNode }) {
+  return (
+    <div className="group-head">
+      <h3>{title}</h3>
+      {children && <div className="group-actions">{children}</div>}
+    </div>
+  );
+}
+
+/** Quiet text action for a group heading; greyed out when there's nothing for it to do. */
+export function GroupAction({ label, disabled, onClick }: { label: string; disabled?: boolean; onClick: () => void }) {
+  return (
+    <button type="button" className="group-action" disabled={disabled} onClick={onClick}>
+      <svg width="13" height="13" viewBox="0 0 14 14" aria-hidden>
+        <path d="M2.75 7a4.25 4.25 0 1 0 1.3-3.06" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+        <path d="M3.6 1.6v2.6h2.6" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      {label}
+    </button>
+  );
+}

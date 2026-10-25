@@ -472,7 +472,8 @@ select {
     top: auto;
     left: 0;
     width: 100vw;
-    max-height: 88dvh;
+    /* a fixed height, not max-height: the sheet must not jump when tabs differ in length */
+    height: 88dvh;
     border-left: 0;
     border-top: 1px solid var(--line);
     border-radius: var(--radius-l) var(--radius-l) 0 0;
@@ -485,6 +486,7 @@ select {
   }
 }
 .sheet-head {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -511,7 +513,14 @@ select {
   gap: 4px;
   padding: 4px 16px 0;
   border-bottom: 1px solid var(--line);
+  /* never squeezed by a long panel below; scrolls sideways on very narrow screens, without a bar */
+  flex-shrink: 0;
   overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+.tabs-list::-webkit-scrollbar {
+  display: none;
 }
 .tab {
   background: none;
@@ -528,6 +537,7 @@ select {
   border-bottom-color: var(--dawn);
 }
 .tab-panel {
+  min-height: 0;
   overflow-y: auto;
   padding: 4px 20px 32px;
   flex: 1;
@@ -754,5 +764,66 @@ select {
   .switch-thumb {
     transition: none;
     animation: none;
+  }
+}
+
+/* group heading with its own actions on the right (e.g. Reset) */
+.group-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 4px;
+}
+.group-head h3 {
+  margin: 0;
+}
+.group-actions {
+  display: flex;
+  gap: 4px;
+  margin-right: -8px; /* the button's padding, so its text lines up with the sliders' edge */
+}
+.group-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-s);
+  padding: 6px 8px;
+  color: var(--moon-dim);
+  font-size: var(--t-sm);
+  cursor: pointer;
+}
+.group-action:hover:not(:disabled) {
+  color: var(--dawn);
+}
+.group-action:disabled {
+  color: var(--moon-faint);
+  opacity: 0.6;
+  cursor: default;
+}
+.group-action svg {
+  transition: transform 0.4s ease;
+}
+.group-action:hover:not(:disabled) svg {
+  transform: rotate(-60deg);
+}
+
+.btn.danger {
+  border-color: color-mix(in srgb, var(--danger) 55%, transparent);
+  color: var(--danger);
+}
+.btn.danger:hover {
+  border-color: var(--danger);
+}
+.confirm-q {
+  flex-basis: 100%;
+  font-size: var(--t-sm);
+  color: var(--moon);
+}
+@media (prefers-reduced-motion: reduce) {
+  .group-action svg {
+    transition: none;
   }
 }

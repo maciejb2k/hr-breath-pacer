@@ -1,8 +1,9 @@
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Tabs from '@radix-ui/react-tabs';
+import { useState } from 'react';
 import { controller, type Snapshot } from '../core/controller';
-import type { BreathMode, BreathPattern, CueKind, ExhaleTexture, VolumeKey } from '../core/settings';
-import { PlayButton, SelectField, SliderField, SwitchField, type Option } from './fields';
+import { DEFAULT_SETTINGS, isDefault, type BreathMode, type BreathPattern, type CueKind, type ExhaleTexture, type Settings, type VolumeKey } from '../core/settings';
+import { GroupAction, GroupHead, PlayButton, SelectField, SliderField, SwitchField, type Option } from './fields';
 
 const INHALE_CUES: Option<CueKind>[] = [
   { value: 'double', label: 'Two tones up' },
@@ -62,6 +63,9 @@ const VOLUMES: { key: VolumeKey; label: string }[] = [
   { key: 'bowl', label: 'Background bowls' },
   { key: 'master', label: 'Everything' },
 ];
+
+const BOWL_KEYS: (keyof Settings)[] = ['bowlInterval', 'bowlProb'];
+const ALL_KEYS = Object.keys(DEFAULT_SETTINGS) as (keyof Settings)[];
 
 const db = (v: number) => (v <= -40 ? 'off' : `${v > 0 ? '+' : ''}${v} dB`);
 
@@ -229,13 +233,17 @@ function SettingsTabs({ snap }: { snap: Snapshot }) {
 
             <Tabs.Content className="tab-panel" value="mix">
               <div className="group">
-                <h3>Volume</h3>
+                <GroupHead title="Volume">
+                  <GroupAction label="Reset" disabled={isDefault(s, ['vols'])} onClick={() => c.reset(['vols'])} />
+                </GroupHead>
                 {VOLUMES.map(({ key, label }) => (
                   <SliderField key={key} label={label} value={s.vols[key]} min={-40} max={6} step={1} format={db} onChange={(v) => c.setVolume(key, v)} />
                 ))}
               </div>
               <div className="group">
-                <h3>Background bowls</h3>
+                <GroupHead title="Background bowls">
+                  <GroupAction label="Reset" disabled={isDefault(s, BOWL_KEYS)} onClick={() => c.reset(BOWL_KEYS)} />
+                </GroupHead>
                 <p>Random strikes in the music’s key. Never right after a breath cue.</p>
                 <SelectField
                   label="At most every"
@@ -285,7 +293,44 @@ function SettingsTabs({ snap }: { snap: Snapshot }) {
                   onChange={(v) => c.update({ skyGlow: v })}
                 />
               </div>
+              <ResetAll settings={s} />
             </Tabs.Content>
           </Tabs.Root>
+  );
+}
+
+/** Restores every setting in every tab; asks once, in place, because it can't be undone. */
+function ResetAll({ settings }: { settings: Settings }) {
+  const [asking, setAsking] = useState(false);
+  const atDefaults = isDefault(settings, ALL_KEYS);
+  return (
+    <div className="group">
+      <h3>Default settings</h3>
+      <p>Puts every setting in every tab back the way the app came, volumes included. Your smartwatch stays connected.</p>
+      <div className="btn-row" aria-live="polite">
+        {!asking ? (
+          <button className="btn" disabled={atDefaults} onClick={() => setAsking(true)}>
+            {atDefaults ? 'All settings are at their defaults' : 'Reset all settings'}
+          </button>
+        ) : (
+          <>
+            <span className="confirm-q">Reset all settings? This can’t be undone.</span>
+            <button
+              className="btn danger"
+              autoFocus
+              onClick={() => {
+                controller.reset();
+                setAsking(false);
+              }}
+            >
+              Reset all
+            </button>
+            <button className="btn" onClick={() => setAsking(false)}>
+              Keep my settings
+            </button>
+          </>
+        )}
+      </div>
+    </div>
   );
 }

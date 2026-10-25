@@ -47,6 +47,11 @@ export const DEFAULT_SETTINGS: Settings = {
   vols: { drone: -2, heart: -6, bowl: -25, breath: 0, cues: -6, inhale: -6, master: 0 },
 };
 
+/** true when every listed setting still has its default value */
+export function isDefault(s: Settings, keys: (keyof Settings)[]) {
+  return keys.every((k) => JSON.stringify(s[k]) === JSON.stringify(DEFAULT_SETTINGS[k]));
+}
+
 const KEY = 'hrBreathPacer.settings';
 
 export function loadSettings(): Settings {
