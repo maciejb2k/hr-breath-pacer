@@ -1,10 +1,20 @@
-# HR Breath Pacer
+<p align="center">
+  <img src="public/pwa-192x192.png" width="88" height="88" alt="HR Breath Pacer icon" />
+</p>
 
-Calming music driven by your heart rate.
+<h1 align="center">HR Breath Pacer</h1>
 
-It reads your pulse live from a Bluetooth smartwatch, plays generative ambient music a few beats per minute slower than your heart, and paces your breathing with a cue at the start of every inhale and exhale (4 in, 6 out by default). Your heart tends to follow the music down.
+<p align="center">Calming music driven by your heart rate.</p>
 
-**Try it:** [hr-breathe.maciejbiel.pl](https://hr-breathe.maciejbiel.pl), in Chrome on a computer or on an Android phone.
+<p align="center">
+  <a href="https://hr-breathe.maciejbiel.pl"><strong>Open the app at hr-breathe.maciejbiel.pl</strong></a>
+  <br />
+  <sub>Chrome on a computer or an Android phone. Installable to your home screen.</sub>
+</p>
+
+<br />
+
+It **reads your pulse live** from a Bluetooth smartwatch, plays **generative ambient music** a few beats per minute slower than your heart, and paces your breathing with a cue at the start of every inhale and exhale (4 in, 6 out by default). Your heart tends to follow the music down.
 
 ![HR Breath Pacer during an inhale](docs/screenshot_inhale.png)
 ![HR Breath Pacer during an exhale](docs/screenshot_exhale.png)
