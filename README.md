@@ -18,6 +18,7 @@ It **reads your pulse live** from a Bluetooth smartwatch, plays **generative amb
 
 ![HR Breath Pacer during an inhale](docs/screenshot_inhale.png)
 ![HR Breath Pacer during an exhale](docs/screenshot_exhale.png)
+![HR Breath Pacer on a phone: inhale, exhale and settings](docs/screenshots_mobile.jpg)
 
 ## What you need
 
