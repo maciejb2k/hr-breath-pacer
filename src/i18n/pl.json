@@ -68,6 +68,7 @@
   "settings.hide": "Ukryj",
   "settings.close": "Zamknij",
   "settings.sections": "Sekcje ustawień",
+
   "tab.heart": "Smartwatch",
   "tab.breath": "Oddech",
   "tab.mix": "Mikser",
@@ -150,6 +151,7 @@
   "follow.offset": "Muzyka wolniejsza od serca o",
   "follow.min": "Najwolniejsze tempo muzyki",
   "follow.rsa": "Zwalnianie przy każdym wydechu",
+
   "common.off": "wył.",
 
   "mix.volume": "Głośność",
@@ -204,5 +206,9 @@
   "defaults.reset": "Resetuj wszystkie ustawienia",
   "defaults.confirm": "Zresetować wszystkie ustawienia? Tego nie da się cofnąć.",
   "defaults.yes": "Resetuj wszystko",
-  "defaults.no": "Zostaw moje ustawienia"
+  "defaults.no": "Zostaw moje ustawienia",
+
+  "update.ready": "Jest nowa wersja.",
+  "update.reload": "Odśwież",
+  "update.later": "Później"
 }

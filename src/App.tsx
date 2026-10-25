@@ -5,6 +5,7 @@ import { BreathLight } from './components/BreathLight';
 import { NightSky } from './components/NightSky';
 import { SettingsDock, SettingsSheet } from './components/SettingsSheet';
 import { Trend } from './components/Trend';
+import { UpdateBar } from './components/UpdateBar';
 import { t } from './i18n';
 import { breathUnits } from './core/settings';
 
@@ -221,6 +222,7 @@ export default function App() {
       {docked && <SettingsDock snap={snap} onHide={() => setDockOpen(false)} />}
     </div>
     {!wide && <SettingsSheet snap={snap} open={sheetOpen} onOpenChange={setSheetOpen} />}
+    <UpdateBar running={snap.running} />
     </>
   );
 }
