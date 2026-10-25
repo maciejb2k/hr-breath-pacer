@@ -1,7 +1,8 @@
 import { useSyncExternalStore } from 'react';
 import { AudioEngine, type PreviewKind } from './audioEngine';
 import { HeartRateBle, bleSupport, type BleState, type BleSupport } from './heartRateBle';
-import { setLang, type Key, type Vars } from '../i18n';
+import { setLang, t, type Key, type Vars } from '../i18n';
+import * as notification from './mediaNotification';
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, type AudioQuality, type Settings, type VolumeKey } from './settings';
 
 const DEFAULT_BPM = 60;
@@ -167,6 +168,7 @@ class Controller {
     saveSettings(this.s);
     if ('timerMinutes' in patch) this.armTimer();
     if (patch.lang) setLang(patch.lang);
+    if ('mediaNotification' in patch || patch.lang) this.syncNotification(true);
     this.emit();
   }
   setVolume(key: VolumeKey, db: number) {
@@ -231,6 +233,7 @@ class Controller {
       this.running = true;
       this.sessionStart = Date.now();
       this.sessionStartHR = this.smoothedHR;
+      this.syncNotification(true);
       this.armTimer();
       await this.requestWakeLock();
       this.message =
@@ -252,8 +255,36 @@ class Controller {
     this.running = false;
     this.timer = { endAt: null, fading: false };
     this.releaseWakeLock();
+    this.syncNotification(true);
     this.message = reason === 'timer' ? { key: 'msg.timerEnded' } : null;
     this.emit();
+  }
+
+  // ---------------------------------------------------------------- media notification
+  private notificationShown = false;
+  private notificationText = '';
+  /** shows, refreshes or hides the media notification to match the session and the setting */
+  private syncNotification(force = false) {
+    const want = this.running && this.s.mediaNotification;
+    if (!want) {
+      if (this.notificationShown) notification.hide();
+      this.notificationShown = false;
+      return;
+    }
+    const min = Math.floor((Date.now() - (this.sessionStart ?? Date.now())) / 60000);
+    const hr = this.smoothedHR == null ? null : Math.round(this.smoothedHR);
+    const info = {
+      title: t('app.title'),
+      status: hr == null ? t('notif.statusNoHR', { min }) : t('notif.status', { min, hr }),
+    };
+    const key = info.title + info.status;
+    if (!this.notificationShown) {
+      this.notificationShown = true;
+      notification.show(info, () => this.stop());
+    } else if (force || key !== this.notificationText) {
+      notification.update(info);
+    }
+    this.notificationText = key;
   }
 
   async preview(kind: PreviewKind) {
@@ -365,6 +396,7 @@ class Controller {
       this.history.push({ t: Date.now(), raw: this.rawHR, hr: this.smoothedHR, bpm: this.engine.currentBPM() });
       if (this.history.length > MAX_HISTORY) this.history.splice(0, this.history.length - MAX_HISTORY);
     }
+    this.syncNotification();
     // sleep timer: fade over the last minute, then stop
     if (this.running && this.timer.endAt != null) {
       const rem = this.timer.endAt - Date.now();

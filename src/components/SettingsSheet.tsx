@@ -1,7 +1,7 @@
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Tabs from '@radix-ui/react-tabs';
 import {
-  ArrowCounterClockwise, BellSimple, DeviceMobile, Flask, Heartbeat, Metronome, MoonStars, MusicNotes,
+  ArrowCounterClockwise, BellSimple, DeviceMobile, Flask, Heartbeat, Metronome, MoonStars, MusicNotes, Notification,
   Sparkle, SpeakerSimpleHigh, SunHorizon, Timer, Watch, Waveform, Wind, type Icon,
 } from '@phosphor-icons/react';
 import { useState } from 'react';
@@ -356,6 +356,11 @@ function SettingsTabs({ snap }: { snap: Snapshot }) {
                   format={(v) => (v === 0 ? t('screen.noAurora') : `${Math.round(v * 100)}%`)}
                   onChange={(v) => c.update({ skyGlow: v })}
                 />
+              </div>
+              <div className="group">
+                <GroupHead title={t('notif.title')} icon={Notification} />
+                <p>{t('notif.hint')}</p>
+                <SwitchField label={t('notif.toggle')} checked={s.mediaNotification} onChange={(v) => c.update({ mediaNotification: v })} />
               </div>
               <div className="group">
                 <GroupHead title={t('quality.title')} icon={Waveform} />

@@ -210,5 +210,11 @@
 
   "update.ready": "Jest nowa wersja.",
   "update.reload": "Odśwież",
-  "update.later": "Później"
+  "update.later": "Później",
+
+  "notif.title": "Powiadomienie",
+  "notif.toggle": "Pokazuj sesję w powiadomieniu",
+  "notif.hint": "Jak w odtwarzaczu muzyki: sesję widać na ekranie blokady i w powiadomieniach, z przyciskiem, który ją kończy. Może też pomóc, żeby dźwięk nie urywał się przy wygaszonym ekranie.",
+  "notif.status": "{min} min · tętno {hr}",
+  "notif.statusNoHR": "{min} min"
 }

@@ -210,5 +210,11 @@
 
   "update.ready": "A new version is ready.",
   "update.reload": "Reload",
-  "update.later": "Later"
+  "update.later": "Later",
+
+  "notif.title": "Media notification",
+  "notif.toggle": "Show the session in a notification",
+  "notif.hint": "Like a music player: the session shows on the lock screen and in your notifications, with a button that ends it. It can also help the sound keep playing with the screen off.",
+  "notif.status": "{min} min · heart rate {hr}",
+  "notif.statusNoHR": "{min} min"
 }
