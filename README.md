@@ -7,7 +7,7 @@
 <p align="center">Calming music driven by your heart rate.</p>
 
 <p align="center">
-  <a href="https://hr-breathe.maciejbiel.pl"><strong>Open the app at hr-breathe.maciejbiel.pl</strong></a>
+  <a href="https://hr-breath.maciejbiel.pl"><strong>Open the app at hr-breath.maciejbiel.pl</strong></a>
   <br />
   <sub>Chrome on a computer or an Android phone. Installable to your home screen.</sub>
 </p>
