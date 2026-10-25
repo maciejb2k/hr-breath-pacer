@@ -217,6 +217,48 @@ select {
   width: 100%;
   height: 100%;
 }
+/* phase word under the breath track; positioned from the canvas geometry every frame */
+.phase-label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none;
+  transition: top 0.6s ease; /* the preview line goes away when a session starts */
+  text-align: center;
+}
+.phase-word {
+  font-family: var(--serif);
+  font-variation-settings: 'SOFT' 100, 'opsz' 36;
+  font-weight: 350;
+  line-height: 1;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.phase-label[data-phase='in'] .phase-word {
+  color: var(--dawn);
+}
+.phase-label[data-phase='out'] .phase-word {
+  color: var(--dusk);
+}
+/* before a session the word only previews the rhythm, so it sits back a little */
+.phase-label[data-live='false'] .phase-word {
+  opacity: 0.75;
+}
+@media (prefers-reduced-motion: reduce) {
+  .phase-label {
+    transition: none;
+  }
+}
+.phase-sub {
+  font-size: var(--t-sm);
+  color: var(--moon-dim);
+}
+.phase-sub:empty {
+  display: none;
+}
 
 /* heart ↔ music: the gap between the two tempos is the idea of the app */
 /* heart | chart | music. The readings have fixed-width columns so the layout never shifts
@@ -264,6 +306,10 @@ select {
 @media (max-width: 640px) {
   .gap {
     gap: 10px;
+  }
+  /* no room for it beside a phone-width chart; the line stays so both readings keep their height */
+  .reading .idle-hint {
+    visibility: hidden;
   }
   .status {
     order: 3;
@@ -381,6 +427,16 @@ select {
 }
 .meta.error {
   color: var(--danger);
+}
+/* the resting hint before anything is connected: small print, under the buttons it explains */
+.meta.quiet {
+  font-size: var(--t-xs);
+  color: var(--moon-faint);
+  max-width: none;
+  text-wrap: balance;
+}
+.credit {
+  color: var(--moon-dim);
 }
 
 /* ---------------------------------------------------------------- chart */

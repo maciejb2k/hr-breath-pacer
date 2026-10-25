@@ -9,9 +9,34 @@ const DAWN = [233, 180, 127];
 const DUSK = [126, 163, 212];
 const MOON = [198, 207, 224];
 
+// where an element's letters actually sit, in viewport px: the top of its tallest glyph and its baseline
+const probe = document.createElement('canvas').getContext('2d')!;
+function glyphs(el: Element) {
+  const cs = getComputedStyle(el);
+  // built by hand: cs.font is empty whenever font-variation-settings are in play
+  probe.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+  const m = probe.measureText(el.textContent || 'H');
+  const size = parseFloat(cs.fontSize);
+  const lh = cs.lineHeight === 'normal' ? m.fontBoundingBoxAscent + m.fontBoundingBoxDescent : parseFloat(cs.lineHeight);
+  const box = el.getBoundingClientRect();
+  const baseline = box.top + (lh - (m.fontBoundingBoxAscent + m.fontBoundingBoxDescent)) / 2 + m.fontBoundingBoxAscent;
+  return { top: baseline - Math.min(m.actualBoundingBoxAscent, size), baseline };
+}
+// the highest line of text inside a container
+function firstText(root: Element | null) {
+  if (!root) return null;
+  let best: Element | null = null;
+  for (const el of root.querySelectorAll('*')) {
+    if (el.children.length || !el.textContent?.trim() || !el.getClientRects().length) continue;
+    if (!best || el.getBoundingClientRect().top < best.getBoundingClientRect().top) best = el;
+  }
+  return best;
+}
+
 const ease = (p: number) => 0.5 - 0.5 * Math.cos(Math.PI * p);
 const rgba = (c: number[], a: number) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
-const TEXT_SPACE = 104; // px reserved under the track for the phase word
+const TEXT_SPACE = 128; // px reserved under the track for the phase word
+const CHROME_PAD = 8; // fallback when the charts aren't found: their padding below the stage
 
 /**
  * units: [inhale, exhale] of the breath pattern — sets the proportions of the track,
@@ -19,6 +44,7 @@ const TEXT_SPACE = 104; // px reserved under the track for the phase word
  */
 export function BreathLight({ running, units }: { running: boolean; units: [number, number] }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const labelRef = useRef<HTMLDivElement>(null);
   const runningRef = useRef(running);
   runningRef.current = running;
   const unitsRef = useRef(units);
@@ -27,6 +53,9 @@ export function BreathLight({ running, units }: { running: boolean; units: [numb
   useEffect(() => {
     const canvas = ref.current!;
     const g = canvas.getContext('2d')!;
+    const label = labelRef.current!;
+    const [word, sub] = label.children as unknown as [HTMLElement, HTMLElement];
+    let shown = '';
     let raf = 0;
     let level = 0.15;
     let from = 0.15;
@@ -162,23 +191,43 @@ export function BreathLight({ running, units }: { running: boolean; units: [numb
         }
       }
 
-      // ---- phase word and seconds left, in the space reserved under the track
-      g.textAlign = 'center';
-      g.textBaseline = 'middle';
-      const ty = cy + trackR + 46;
+      // ---- phase word and seconds left, in the space reserved under the track.
+      // Real text rather than canvas text: the canvas is capped at 2x pixel density,
+      // so on sharper phone screens canvas text came out soft next to the HTML readings.
       const left = Math.max(1, Math.ceil(phaseLeftMs / 1000));
-      g.fillStyle = rgba(phase === 'in' ? DAWN : DUSK, live ? 0.95 : 0.6);
-      g.font = `300 ${Math.round(Math.min(40, Math.max(24, trackR * 0.17)))}px "Fraunces Variable", Georgia, serif`;
-      g.fillText(`${phase === 'in' ? 'Inhale' : 'Exhale'} ${left}`, cx, ty);
-      if (!live) {
-        g.fillStyle = rgba(MOON, 0.5);
-        g.font = `400 14px "Figtree Variable", system-ui, sans-serif`;
-        g.fillText(`Rhythm preview ${inU} : ${outU}`, cx, ty + 30);
+      const size = Math.round(Math.min(40, Math.max(24, trackR * 0.17)));
+      const key = `${phase}|${left}|${live}|${inU}:${outU}|${Math.round(cy)}|${Math.round(trackR)}|${Math.round(H)}|${size}`;
+      if (key !== shown) {
+        shown = key;
+        label.dataset.phase = phase;
+        label.dataset.live = String(live);
+        word.style.fontSize = `${size}px`;
+        word.textContent = `${phase === 'in' ? 'Inhale' : 'Exhale'} ${left}`;
+        sub.textContent = live ? '' : `Rhythm preview ${inU} : ${outU}`;
+        // optically centred between the track and the charts under the stage: the gap from the
+        // track to the tops of the letters equals the gap from the last baseline to the charts' letters
+        // (text boxes carry empty leading, so centring the boxes left the top looking cramped)
+        const trackBottom = cy + trackR + 1.5;
+        const stageTop = canvas.getBoundingClientRect().top;
+        const chart = firstText(document.querySelector('.gap'));
+        const chartTop = chart ? glyphs(chart).top - stageTop : H + CHROME_PAD;
+        const last = sub.textContent ? sub : word;
+        const inTop = word.offsetTop + glyphs(word).top - word.getBoundingClientRect().top;
+        const inBase = last.offsetTop + glyphs(last).baseline - last.getBoundingClientRect().top;
+        label.style.top = `${(trackBottom + chartTop - inTop - inBase) / 2}px`;
       }
     };
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
   }, []);
 
-  return <canvas ref={ref} role="img" aria-label="Breath light: grows as you breathe in, shrinks as you breathe out" />;
+  return (
+    <>
+      <canvas ref={ref} role="img" aria-label="Breath light: grows as you breathe in, shrinks as you breathe out" />
+      <div ref={labelRef} className="phase-label" aria-hidden>
+        <span className="phase-word" />
+        <span className="phase-sub" />
+      </div>
+    </>
+  );
 }

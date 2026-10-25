@@ -89,7 +89,9 @@ export function Trend({ sessionStart, running, caption }: { sessionStart: number
 
       if (!data.length) {
         g.textBaseline = 'middle';
-        g.fillText(all.length ? 'No readings in the last 5 minutes' : 'Waiting for the first heart rate reading', L + pw / 2, T + ph / 2);
+        const empty = all.length ? 'No readings in the last 5 minutes' : 'Waiting for the first heart rate reading';
+        // only when it fits: on a narrow phone chart the line would run past the edges
+        if (g.measureText(empty).width <= pw - 16) g.fillText(empty, L + pw / 2, T + ph / 2);
         return;
       }
       const stride = Math.max(1, Math.floor(data.length / pw));

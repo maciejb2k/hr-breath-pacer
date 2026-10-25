@@ -30,9 +30,12 @@ function SourceStatus({ snap }: { snap: Snapshot }) {
   return <span><i className="dot" />No heart rate source</span>;
 }
 
+/** nothing connected yet: the status line explains what's needed, signed by the author */
+const awaitingSource = (snap: Snapshot) => !snap.message && !snap.running && !snap.sim.enabled && snap.ble.state === 'off';
+
 function sessionLine(snap: Snapshot) {
   if (snap.message) return snap.message.text;
-  if (!snap.running && !snap.sim.enabled && snap.ble.state === 'off') {
+  if (awaitingSource(snap)) {
     return snap.ble.supported
       ? 'Your smartwatch or chest strap must share heart rate over Bluetooth (the standard Heart Rate profile).'
       : snap.ble.reason;
@@ -161,7 +164,7 @@ export default function App() {
           <div className="reading music right">
             <span className="what">music</span>
             <span className="num">{music == null ? '–' : Math.round(music)}</span>
-            <span className="sub">{snap.running ? ' ' : 'plays once you start'}</span>
+            <span className="sub idle-hint">{snap.running ? ' ' : 'plays once you start'}</span>
           </div>
         </section>
 
@@ -210,7 +213,8 @@ export default function App() {
               {snap.running ? 'End session' : snap.starting ? 'Starting…' : 'Start session'}
             </button>
           )}
-          <p className={`meta${snap.message?.error ? ' error' : ''}`} role="status">
+          <p className={`meta${snap.message?.error ? ' error' : ''}${awaitingSource(snap) ? ' quiet' : ''}`} role="status">
+            {awaitingSource(snap) && <span className="credit">Maciej Biel 2026 · </span>}
             {sessionLine(snap)}
           </p>
         </div>
