@@ -676,7 +676,8 @@ select {
   align-items: center;
   flex: 1;
   height: 28px;
-  touch-action: none;
+  /* vertical swipes scroll the settings; horizontal ones are the slider's (see useTouchDrag) */
+  touch-action: pan-y;
   user-select: none;
 }
 .slider-track {

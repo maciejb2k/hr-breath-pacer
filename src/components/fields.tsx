@@ -2,7 +2,7 @@ import * as RSelect from '@radix-ui/react-select';
 import * as RSlider from '@radix-ui/react-slider';
 import * as RSwitch from '@radix-ui/react-switch';
 import { ArrowCounterClockwise, CaretDown, Play, type Icon } from '@phosphor-icons/react';
-import { useId, type ReactNode } from 'react';
+import { useId, useRef, type PointerEvent, type ReactNode } from 'react';
 
 export function SliderField(props: {
   label: string;
@@ -14,6 +14,7 @@ export function SliderField(props: {
   onChange: (v: number) => void;
 }) {
   const id = useId();
+  const touch = useTouchDrag(props);
   return (
     <div className="field">
       <span className="field-label" id={id}>
@@ -29,6 +30,7 @@ export function SliderField(props: {
           step={props.step}
           onValueChange={([v]) => props.onChange(v)}
           aria-labelledby={id}
+          {...touch}
         >
           <RSlider.Track className="slider-track">
             <RSlider.Range className="slider-range" />
@@ -38,6 +40,56 @@ export function SliderField(props: {
       </div>
     </div>
   );
+}
+
+const DECIDE_PX = 8; // movement before a touch counts as a horizontal drag or a scroll
+
+/**
+ * Touch handling for sliders in a scrolling list. Radix jumps to the finger on touch-down,
+ * so scrolling past a slider used to change it. Here a touch does nothing until it moves:
+ * mostly vertical is left to the page as a scroll, mostly horizontal moves the value by the
+ * distance dragged (no jump, and it can start anywhere on the slider). Mouse and keyboard keep Radix's behaviour.
+ */
+function useTouchDrag({ value, min, max, step, onChange }: { value: number; min: number; max: number; step: number; onChange: (v: number) => void }) {
+  const drag = useRef<{ id: number; x0: number; y0: number; v0: number; width: number; active: boolean } | null>(null);
+  const snap = (v: number) => Math.min(max, Math.max(min, Number((min + Math.round((v - min) / step) * step).toFixed(6))));
+  // preventDefault() is Radix's switch: its own pointer handler is skipped when ours called it
+  const mine = (e: PointerEvent<HTMLElement>) => {
+    if (e.pointerType === 'mouse') return false;
+    e.preventDefault();
+    return true;
+  };
+  return {
+    onPointerDown(e: PointerEvent<HTMLElement>) {
+      if (!mine(e)) return;
+      const width = e.currentTarget.getBoundingClientRect().width || 1;
+      drag.current = { id: e.pointerId, x0: e.clientX, y0: e.clientY, v0: value, width, active: false };
+    },
+    onPointerMove(e: PointerEvent<HTMLElement>) {
+      if (!mine(e)) return;
+      const d = drag.current;
+      if (!d || d.id !== e.pointerId) return;
+      const dx = e.clientX - d.x0;
+      const dy = e.clientY - d.y0;
+      if (!d.active) {
+        if (Math.abs(dx) > DECIDE_PX && Math.abs(dx) > Math.abs(dy)) {
+          d.active = true;
+          e.currentTarget.setPointerCapture(e.pointerId);
+        } else if (Math.abs(dy) > DECIDE_PX) {
+          drag.current = null; // a scroll: the browser takes it from here
+        }
+        return;
+      }
+      const v = snap(d.v0 + (dx / d.width) * (max - min));
+      if (v !== value) onChange(v);
+    },
+    onPointerUp(e: PointerEvent<HTMLElement>) {
+      if (mine(e)) drag.current = null;
+    },
+    onPointerCancel() {
+      drag.current = null;
+    },
+  };
 }
 
 export interface Option<T extends string> {
