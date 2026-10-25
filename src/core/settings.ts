@@ -2,7 +2,17 @@ export type BreathMode = 'sync' | 'fixed';
 export type BreathPattern = '4:6' | '4:7' | '4:8' | 'prog';
 export type CueKind = 'ping' | 'double' | 'kalimba' | 'glass' | 'bowl' | 'wood' | 'gong' | 'deep' | 'glide' | 'none';
 export type ExhaleTexture = 'air' | 'sigh' | 'hum' | 'airhum' | 'none';
-export type VolumeKey = 'drone' | 'heart' | 'bowl' | 'breath' | 'cues' | 'inhale' | 'master';
+export type InhaleTexture = 'air' | 'hum' | 'airhum' | 'none';
+export type AudioQuality = 'low' | 'medium' | 'high';
+
+// Sample rate per quality; undefined = the device's own rate (usually 48 kHz).
+// Fewer samples per second means less work for the audio thread, and the master
+// lowpass at 3.2 kHz leaves little up high to lose.
+export const SAMPLE_RATE: Record<AudioQuality, number | undefined> = { low: 24000, medium: 32000, high: undefined };
+export const isPhone = typeof navigator !== 'undefined' && /Android|iPhone|iPad/i.test(navigator.userAgent);
+// 'inhale' / 'cues' are the inhale / exhale onset cues (key names kept so saved settings carry over),
+// 'inhaleTex' / 'exhaleTex' the sounds under each phase
+export type VolumeKey = 'drone' | 'heart' | 'bowl' | 'breath' | 'cues' | 'inhale' | 'inhaleTex' | 'exhaleTex' | 'master';
 
 export interface Settings {
   alpha: number;
@@ -12,6 +22,8 @@ export interface Settings {
   breathMode: BreathMode;
   breathPattern: BreathPattern;
   exhaleSound: ExhaleTexture;
+  /** sound under the inhale; 'none' by default, the inhale has only its onset cue */
+  inhaleSound: InhaleTexture;
   inhaleCue: CueKind;
   inhalePitch: number;
   exhaleCue: CueKind;
@@ -23,6 +35,8 @@ export interface Settings {
   skyGlow: number;
   /** during a session, fade everything but the breath light after a few idle seconds */
   autoDim: boolean;
+  /** lower = lighter on the audio thread, against crackling on phones */
+  audioQuality: AudioQuality;
   vols: Record<VolumeKey, number>;
 }
 
@@ -35,6 +49,7 @@ export const DEFAULT_SETTINGS: Settings = {
   breathMode: 'fixed',
   breathPattern: '4:6',
   exhaleSound: 'airhum',
+  inhaleSound: 'none',
   inhaleCue: 'double',
   inhalePitch: -7,
   exhaleCue: 'double',
@@ -44,7 +59,8 @@ export const DEFAULT_SETTINGS: Settings = {
   timerMinutes: 0,
   skyGlow: 0.6,
   autoDim: false,
-  vols: { drone: -2, heart: -6, bowl: -25, breath: 0, cues: -6, inhale: -6, master: 0 },
+  audioQuality: isPhone ? 'low' : 'high',
+  vols: { drone: -2, heart: -6, bowl: -25, breath: 0, cues: -6, inhale: -6, inhaleTex: -6, exhaleTex: -6, master: 0 },
 };
 
 /** true when every listed setting still has its default value */
@@ -58,7 +74,9 @@ export function loadSettings(): Settings {
   try {
     const saved = JSON.parse(localStorage.getItem(KEY) || 'null');
     if (!saved) return structuredClone(DEFAULT_SETTINGS);
-    return { ...DEFAULT_SETTINGS, ...saved, vols: { ...DEFAULT_SETTINGS.vols, ...saved.vols } };
+    // 'cues' used to set the exhale cue and the sound under it together: the new texture slider starts there
+    const migrated = saved.vols && saved.vols.exhaleTex == null && saved.vols.cues != null ? { exhaleTex: saved.vols.cues } : {};
+    return { ...DEFAULT_SETTINGS, ...saved, vols: { ...DEFAULT_SETTINGS.vols, ...migrated, ...saved.vols } };
   } catch {
     return structuredClone(DEFAULT_SETTINGS);
   }

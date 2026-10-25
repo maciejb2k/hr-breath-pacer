@@ -1,5 +1,5 @@
 import * as Tone from 'tone';
-import { breathUnits, type CueKind, type Settings, type VolumeKey } from './settings';
+import { SAMPLE_RATE, breathUnits, type AudioQuality, type CueKind, type Settings, type VolumeKey } from './settings';
 import { vis } from './visual';
 
 // F lydian / C-major pentatonic colour: Fmaj9 -> Cmaj7 -> Dm9 -> Am7
@@ -12,7 +12,7 @@ const CHORDS = [
 ];
 type Chord = (typeof CHORDS)[number];
 
-export type PreviewKind = 'in' | 'out' | 'tex' | 'pair';
+export type PreviewKind = 'in' | 'out' | 'intex' | 'tex' | 'pair';
 
 /** What the engine needs from the rest of the app, read live on every breath. */
 export interface EngineHost {
@@ -127,6 +127,8 @@ async function buildGraph() {
   //    nails the start of the phase, and for the exhale an optional texture carrying the out-breath.
   const cuesVol = makeLayer(0.7, 0.45);
   const inhaleVol = makeLayer(0.7, 0.5);
+  const inTexVol = makeLayer(0.7, 0.5);
+  const outTexVol = makeLayer(0.7, 0.45);
 
   // trim: per-sound level correction in dB, measured so all onsets of one phase are about equally loud
   function makeCueBank(out: Tone.InputNode, trim: Partial<Record<CueKind, number>>) {
@@ -219,7 +221,7 @@ async function buildGraph() {
   const outBank = makeCueBank(cuesVol, { ping: 5, gong: 5.5, deep: -12, bowl: 9.5, kalimba: 10, wood: -6, glide: 4.5 });
 
   const humFilter = new T.Filter({ type: 'lowpass', frequency: 300, rolloff: -24, Q: 1.5 });
-  humFilter.connect(cuesVol);
+  humFilter.connect(outTexVol);
   const hum = makePool(T.Synth, {
     oscillator: { type: 'fattriangle', count: 2, spread: 14 },
     envelope: { attack: 0.35, attackCurve: 'sine', decay: 1.5, sustain: 0.6, release: 2.5 },
@@ -230,7 +232,7 @@ async function buildGraph() {
   const airBP = new T.Filter({ type: 'bandpass', frequency: 1200, Q: 0.5 });
   const airLP = new T.Filter({ type: 'lowpass', frequency: 1800, rolloff: -24 });
   const airGain = new T.Gain(0);
-  airNoise.chain(airBP, airLP, airGain, cuesVol);
+  airNoise.chain(airBP, airLP, airGain, outTexVol);
 
   // Sigh ("haaa"): pink noise through two vowel formants gliding down
   const sighNoise = new T.Noise({ type: 'pink', volume: 4 });
@@ -241,15 +243,35 @@ async function buildGraph() {
   sighNoise.fan(sighF1, sighF2);
   sighF1.connect(sighGain);
   sighF2.chain(sighF2Gain, sighGain);
-  sighGain.connect(cuesVol);
+  sighGain.connect(outTexVol);
+
+  // Inhale textures, the exhale ones mirrored: air drawn in (the same noise source through
+  // a band-pass drifting up) and a warm tone whose filter opens, both swelling through the inhale
+  const inAirBP = new T.Filter({ type: 'bandpass', frequency: 300, Q: 0.5 });
+  const inAirLP = new T.Filter({ type: 'lowpass', frequency: 1800, rolloff: -24 });
+  const inAirGain = new T.Gain(0);
+  airNoise.connect(inAirBP);
+  inAirBP.chain(inAirLP, inAirGain, inTexVol);
+  const inHumFilter = new T.Filter({ type: 'lowpass', frequency: 170, rolloff: -24, Q: 1.5 });
+  inHumFilter.connect(inTexVol);
+  // slow attack and a short release, so the tone doesn't spill over the exhale onset;
+  // built on first use, like the cue sounds
+  let inHumPool: Pool | null = null;
+  const inHum = () => (inHumPool ??= makePool(T.Synth, {
+    oscillator: { type: 'fattriangle', count: 2, spread: 14 },
+    envelope: { attack: 1.5, attackCurve: 'sine', decay: 0.5, sustain: 1, release: 0.8 },
+  } as Partial<Tone.SynthOptions>, 4, -17, inHumFilter));
+  const releaseInHum = () => inHumPool?.releaseAll();
 
   const layers: Record<Exclude<VolumeKey, 'master'>, Tone.Volume> = {
     drone: droneVol, heart: heartVol, bowl: bowlVol, breath: breathVol, cues: cuesVol, inhale: inhaleVol,
+    inhaleTex: inTexVol, exhaleTex: outTexVol,
   };
 
   return {
     master, fade, layers, drone, heart, heartLP, bowl, noise, breathLP, breathAmp, droneFilter,
     inBank, outBank, hum, humFilter, airNoise, airBP, airGain, sighNoise, sighF1, sighF2, sighGain,
+    inAirBP, inAirGain, inHum, releaseInHum, inHumFilter,
   };
 }
 
@@ -260,6 +282,14 @@ function exhaleEnvelope(gainParam: Tone.Param<'gain'>, time: number, dur: number
   gainParam.linearRampToValueAtTime(peak, time + attack);
   gainParam.setTargetAtTime(0, time + attack, Math.max(0.5, (dur - attack) / 2.5));
 }
+// Inhale envelope: a slow swell that peaks late in the inhale and is gone just before the exhale
+function inhaleEnvelope(gainParam: Tone.Param<'gain'>, time: number, dur: number, peak: number) {
+  gainParam.cancelScheduledValues(time);
+  gainParam.setValueAtTime(0, time);
+  gainParam.linearRampToValueAtTime(peak * 0.35, time + dur * 0.4);
+  gainParam.linearRampToValueAtTime(peak, time + dur * 0.8);
+  gainParam.linearRampToValueAtTime(0, time + dur * 0.97);
+}
 function sweep(param: Tone.Param<'frequency'> | Tone.Signal<'frequency'>, time: number, dur: number, from: number, to: number) {
   param.cancelScheduledValues(time);
   param.setValueAtTime(from, time);
@@ -269,6 +299,7 @@ function sweep(param: Tone.Param<'frequency'> | Tone.Signal<'frequency'>, time: 
 export class AudioEngine {
   private g: Graph | null = null;
   private building: Promise<void> | null = null;
+  private builtQuality: AudioQuality | null = null;
   private running = false;
   private stopToken = 0;
   private previewToken = 0;
@@ -291,20 +322,33 @@ export class AudioEngine {
 
   constructor(private host: EngineHost) {}
 
+  /** quality of the graph that's built, or null before the first sound */
+  get quality() {
+    return this.builtQuality;
+  }
+
   get isRunning() {
     return this.running;
   }
 
   private async ensureGraph(): Promise<Graph> {
+    const quality = this.host.settings().audioQuality;
+    if (this.building && quality !== this.builtQuality && !this.running) {
+      // the sample rate is fixed per AudioContext: a new quality needs a fresh context and graph.
+      // During a session the change waits for the next start.
+      await this.building;
+      Tone.getContext().dispose();
+      this.g = null;
+      this.building = null;
+    }
     if (!this.building) {
+      this.builtQuality = quality;
       // 'playback' asks the browser for large audio buffers. With Tone's default
       // 'interactive' hint, Android Chrome renders in tiny buffers and this graph
       // (long reverb, many voices) underruns: every sound turns into crackle.
       // Latency doesn't matter here, the music is scheduled ahead anyway.
-      // Phones also render at half the usual sample rate: the master lowpass sits at 3.2 kHz,
-      // so nothing audible lives above 12 kHz and the halved DSP load is free.
-      const mobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
-      const ctx = new AudioContext({ latencyHint: 'playback', ...(mobile && { sampleRate: 24000 }) });
+      const sampleRate = SAMPLE_RATE[quality];
+      const ctx = new AudioContext({ latencyHint: 'playback', ...(sampleRate && { sampleRate }) });
       Tone.setContext(new Tone.Context({ context: ctx, lookAhead: 0.15 }));
     }
     await Tone.start();
@@ -359,7 +403,7 @@ export class AudioEngine {
     this.br = { phase: 'out', left: 0, start: 0, dur: 1 };
     const resets: [Tone.Param<any> | Tone.Signal<any>, number][] = [
       [g.breathLP.frequency, 120], [g.breathAmp.gain, 0.2], [g.droneFilter.frequency, 380],
-      [g.heartLP.frequency, 140], [g.airGain.gain, 0], [g.sighGain.gain, 0],
+      [g.heartLP.frequency, 140], [g.airGain.gain, 0], [g.sighGain.gain, 0], [g.inAirGain.gain, 0],
     ];
     for (const [param, v] of resets) {
       param.cancelScheduledValues(now);
@@ -386,13 +430,14 @@ export class AudioEngine {
     this.stopChords();
     vis.phase = 'idle';
     window.setTimeout(() => {
-      if (token !== this.stopToken) return; // restarted meanwhile
+      if (token !== this.stopToken || g !== this.g) return; // restarted or rebuilt meanwhile
       g.noise.stop();
       g.airNoise.stop();
       g.sighNoise.stop();
       g.drone.releaseAll();
       g.bowl.releaseAll();
       g.hum.releaseAll();
+      g.releaseInHum();
       g.inBank.releaseAll();
       g.outBank.releaseAll();
     }, fadeSec * 1000 + 150);
@@ -425,18 +470,20 @@ export class AudioEngine {
       g.fade.gain.cancelScheduledValues(now);
       g.fade.gain.setValueAtTime(1, now);
       for (const n of [g.airNoise, g.sighNoise]) if (n.state !== 'started') n.start(now);
-      const total = which === 'pair' ? 11 : which === 'tex' ? 7 : 4;
+      const total = which === 'pair' ? 11 : which === 'tex' ? 7 : which === 'intex' ? 5 : 4;
       window.setTimeout(() => {
-        if (token !== this.previewToken || this.running) return;
+        if (token !== this.previewToken || this.running || g !== this.g) return;
         g.fade.gain.linearRampTo(0, 0.5);
         window.setTimeout(() => {
-          if (token !== this.previewToken || this.running) return;
+          if (token !== this.previewToken || this.running || g !== this.g) return;
           g.airNoise.stop();
           g.sighNoise.stop();
         }, 700);
       }, total * 1000);
     }
-    if (which === 'in' || which === 'pair') this.inhaleCueAt(t, 4);
+    if (which === 'in') this.inhaleOnsetAt(t, 4);
+    if (which === 'intex') this.inhaleTextureAt(t, 4);
+    if (which === 'pair') this.inhaleCueAt(t, 4);
     if (which === 'out') this.exhaleOnsetAt(t, 6);
     if (which === 'tex') this.exhaleTextureAt(t, 6);
     if (which === 'pair') this.exhaleCueAt(t + 4, 6);
@@ -464,8 +511,25 @@ export class AudioEngine {
   private inhaleFreq() {
     return Tone.Frequency(this.chord.bell).toFrequency() * Math.pow(2, this.host.settings().inhalePitch / 12);
   }
-  private inhaleCueAt(time: number, dur: number) {
+  private inhaleOnsetAt(time: number, dur: number) {
     this.g!.inBank.play(this.host.settings().inhaleCue, time, this.inhaleFreq(), dur, true);
+  }
+  private inhaleCueAt(time: number, dur: number) {
+    this.inhaleOnsetAt(time, dur);
+    const gap = this.host.settings().inhaleCue === 'none' ? 0 : 0.3;
+    this.inhaleTextureAt(time + gap, dur - gap);
+  }
+  private inhaleTextureAt(time: number, dur: number) {
+    const g = this.g!;
+    const sound = this.host.settings().inhaleSound;
+    if (sound === 'air' || sound === 'airhum') {
+      inhaleEnvelope(g.inAirGain.gain, time, dur, 0.6);
+      sweep(g.inAirBP.frequency, time, dur * 0.9, 300, 1300);
+    }
+    if (sound === 'hum' || sound === 'airhum') {
+      sweep(g.inHumFilter.frequency, time, dur * 0.85, 170, 950);
+      g.inHum().trigger(this.chord.hum, dur * 0.8, time, sound === 'hum' ? 0.9 : 0.6);
+    }
   }
   private exhaleOnsetAt(time: number, dur: number) {
     const s = this.host.settings();

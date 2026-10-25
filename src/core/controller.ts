@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { AudioEngine, type PreviewKind } from './audioEngine';
 import { HeartRateBle, bleSupport, type BleState } from './heartRateBle';
-import { DEFAULT_SETTINGS, loadSettings, saveSettings, type Settings, type VolumeKey } from './settings';
+import { DEFAULT_SETTINGS, loadSettings, saveSettings, type AudioQuality, type Settings, type VolumeKey } from './settings';
 
 const DEFAULT_BPM = 60;
 const SIM_ASLEEP_MS = 180000; // 80 → 55 BPM in 3 minutes
@@ -21,6 +21,8 @@ export interface Snapshot {
   settings: Settings;
   running: boolean;
   starting: boolean;
+  /** quality the sound is being rendered at right now (a change waits for the next session) */
+  audioQuality: AudioQuality | null;
   rawHR: number | null;
   smoothedHR: number | null;
   targetBPM: number | null;
@@ -112,6 +114,7 @@ class Controller {
       settings: this.s,
       running: this.running,
       starting: this.starting,
+      audioQuality: this.engine.quality,
       rawHR: this.rawHR,
       smoothedHR: this.smoothedHR,
       targetBPM: this.targetBPM(),
@@ -171,6 +174,18 @@ class Controller {
     saveSettings(this.s);
     if ('vols' in patch) (Object.keys(this.s.vols) as VolumeKey[]).forEach((k) => this.engine.setVolume(k, this.s.vols[k]));
     if ('timerMinutes' in patch) this.armTimer();
+    this.emit();
+  }
+
+  /** restores the listed mixer volumes to their defaults */
+  resetVolumes(keys: VolumeKey[]) {
+    const vols = { ...this.s.vols };
+    for (const k of keys) {
+      vols[k] = DEFAULT_SETTINGS.vols[k];
+      this.engine.setVolume(k, vols[k]);
+    }
+    this.s = { ...this.s, vols };
+    saveSettings(this.s);
     this.emit();
   }
 

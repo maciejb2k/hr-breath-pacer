@@ -2,7 +2,7 @@ import * as Dialog from '@radix-ui/react-dialog';
 import * as Tabs from '@radix-ui/react-tabs';
 import { useState } from 'react';
 import { controller, type Snapshot } from '../core/controller';
-import { DEFAULT_SETTINGS, isDefault, type BreathMode, type BreathPattern, type CueKind, type ExhaleTexture, type Settings, type VolumeKey } from '../core/settings';
+import { DEFAULT_SETTINGS, isDefault, isPhone, type AudioQuality, type BreathMode, type BreathPattern, type CueKind, type ExhaleTexture, type InhaleTexture, type Settings, type VolumeKey } from '../core/settings';
 import { GroupAction, GroupHead, PlayButton, SelectField, SliderField, SwitchField, type Option } from './fields';
 
 const INHALE_CUES: Option<CueKind>[] = [
@@ -33,6 +33,17 @@ const TEXTURES: Option<ExhaleTexture>[] = [
   { value: 'hum', label: 'Warm hum, “mmm”' },
   { value: 'none', label: 'Nothing' },
 ];
+const INHALE_TEXTURES: Option<InhaleTexture>[] = [
+  { value: 'none', label: 'Nothing' },
+  { value: 'airhum', label: 'Air and a warm tone' },
+  { value: 'air', label: 'Air being drawn in' },
+  { value: 'hum', label: 'Warm tone, opening up' },
+];
+const QUALITIES: Option<AudioQuality>[] = [
+  { value: 'low', label: `Light${isPhone ? ' (default on phones)' : ''}` },
+  { value: 'medium', label: 'Balanced' },
+  { value: 'high', label: `Full${isPhone ? '' : ' (default on computers)'}` },
+];
 const INHALE_PITCH: Option<string>[] = [
   { value: '-12', label: 'Low' },
   { value: '-7', label: 'Medium' },
@@ -54,15 +65,25 @@ const PATTERNS: Option<BreathPattern>[] = [
   { value: '4:8', label: '4 : 8' },
   { value: 'prog', label: 'Lengthen the exhale from 4 : 6 to 4 : 8 over 15 minutes' },
 ];
-const VOLUMES: { key: VolumeKey; label: string }[] = [
-  { key: 'inhale', label: 'Inhale cue' },
-  { key: 'cues', label: 'Exhale cue and backdrop' },
-  { key: 'breath', label: 'Waves' },
-  { key: 'drone', label: 'Ambient' },
-  { key: 'heart', label: 'Pulse' },
-  { key: 'bowl', label: 'Background bowls' },
-  { key: 'master', label: 'Everything' },
+// the mixer in sections: each breath phase, then everything that plays regardless of it
+const VOLUME_SECTIONS: { title: string; sliders: { key: VolumeKey; label: string }[] }[] = [
+  { title: 'Inhale', sliders: [
+    { key: 'inhale', label: 'Sound at the start' },
+    { key: 'inhaleTex', label: 'Sound under the inhale' },
+  ] },
+  { title: 'Exhale', sliders: [
+    { key: 'cues', label: 'Sound at the start' },
+    { key: 'exhaleTex', label: 'Sound under the exhale' },
+  ] },
+  { title: 'Backdrop', sliders: [
+    { key: 'breath', label: 'Waves' },
+    { key: 'drone', label: 'Ambient' },
+    { key: 'heart', label: 'Pulse' },
+    { key: 'bowl', label: 'Background bowls' },
+  ] },
 ];
+const ALL_VOLUMES = Object.keys(DEFAULT_SETTINGS.vols) as VolumeKey[];
+const volsAtDefault = (s: Settings, keys: VolumeKey[]) => keys.every((k) => s.vols[k] === DEFAULT_SETTINGS.vols[k]);
 
 const BOWL_KEYS: (keyof Settings)[] = ['bowlInterval', 'bowlProb'];
 const ALL_KEYS = Object.keys(DEFAULT_SETTINGS) as (keyof Settings)[];
@@ -166,6 +187,17 @@ function SettingsTabs({ snap }: { snap: Snapshot }) {
                 />
               </div>
               <div className="group">
+                <h3>Under the inhale</h3>
+                <p>Swells through the inhale and fades just before the exhale.</p>
+                <SelectField
+                  label="Sound"
+                  value={s.inhaleSound}
+                  options={INHALE_TEXTURES}
+                  onChange={(v) => c.update({ inhaleSound: v })}
+                  after={<PlayButton label="Play the sound under the inhale" onClick={() => c.preview('intex')} />}
+                />
+              </div>
+              <div className="group">
                 <h3>Under the exhale</h3>
                 <p>Plays beneath the exhale, starting just after its cue.</p>
                 <SelectField
@@ -234,12 +266,23 @@ function SettingsTabs({ snap }: { snap: Snapshot }) {
             <Tabs.Content className="tab-panel" value="mix">
               <div className="group">
                 <GroupHead title="Volume">
-                  <GroupAction label="Reset" disabled={isDefault(s, ['vols'])} onClick={() => c.reset(['vols'])} />
+                  <GroupAction label="Reset all" disabled={volsAtDefault(s, ALL_VOLUMES)} onClick={() => c.resetVolumes(ALL_VOLUMES)} />
                 </GroupHead>
-                {VOLUMES.map(({ key, label }) => (
-                  <SliderField key={key} label={label} value={s.vols[key]} min={-40} max={6} step={1} format={db} onChange={(v) => c.setVolume(key, v)} />
-                ))}
+                <SliderField label="Everything" value={s.vols.master} min={-40} max={6} step={1} format={db} onChange={(v) => c.setVolume('master', v)} />
               </div>
+              {VOLUME_SECTIONS.map(({ title, sliders }) => {
+                const keys = sliders.map((x) => x.key);
+                return (
+                  <div className="group" key={title}>
+                    <GroupHead title={title}>
+                      <GroupAction label="Reset" disabled={volsAtDefault(s, keys)} onClick={() => c.resetVolumes(keys)} />
+                    </GroupHead>
+                    {sliders.map(({ key, label }) => (
+                      <SliderField key={key} label={label} value={s.vols[key]} min={-40} max={6} step={1} format={db} onChange={(v) => c.setVolume(key, v)} />
+                    ))}
+                  </div>
+                );
+              })}
               <div className="group">
                 <GroupHead title="Background bowls">
                   <GroupAction label="Reset" disabled={isDefault(s, BOWL_KEYS)} onClick={() => c.reset(BOWL_KEYS)} />
@@ -292,6 +335,14 @@ function SettingsTabs({ snap }: { snap: Snapshot }) {
                   format={(v) => (v === 0 ? 'no aurora' : `${Math.round(v * 100)}%`)}
                   onChange={(v) => c.update({ skyGlow: v })}
                 />
+              </div>
+              <div className="group">
+                <h3>Sound quality</h3>
+                <p>If the sound crackles or stutters, choose a lighter setting. It takes less work from your device, and the music hardly changes.</p>
+                <SelectField label="Quality" value={s.audioQuality} options={QUALITIES} onChange={(v) => c.update({ audioQuality: v })} />
+                {snap.running && s.audioQuality !== snap.audioQuality && (
+                  <p className="note">Takes effect when you start the next session.</p>
+                )}
               </div>
               <ResetAll settings={s} />
             </Tabs.Content>
