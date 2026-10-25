@@ -150,6 +150,9 @@ select {
   padding: 8px 0 clamp(16px, 4.5vh, 44px);
 }
 .wordmark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-family: var(--serif);
   font-variation-settings: 'SOFT' 100, 'opsz' 24;
   font-weight: 400;
@@ -882,4 +885,25 @@ select {
   .group-action svg {
     transition: none;
   }
+}
+
+/* icons: Phosphor Light, the same thin line as the Fraunces headings */
+.wordmark-icon {
+  flex: none;
+  color: var(--heart);
+}
+.group-head h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.head-icon {
+  flex: none;
+  color: var(--moon-dim);
+}
+.head-icon[data-tone='in'] {
+  color: var(--dawn);
+}
+.head-icon[data-tone='out'] {
+  color: var(--dusk);
 }

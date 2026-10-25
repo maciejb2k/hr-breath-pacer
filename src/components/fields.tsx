@@ -1,6 +1,7 @@
 import * as RSelect from '@radix-ui/react-select';
 import * as RSlider from '@radix-ui/react-slider';
 import * as RSwitch from '@radix-ui/react-switch';
+import { ArrowCounterClockwise, CaretDown, Play, type Icon } from '@phosphor-icons/react';
 import { useId, type ReactNode } from 'react';
 
 export function SliderField(props: {
@@ -63,9 +64,7 @@ export function SelectField<T extends string>(props: {
           <RSelect.Trigger className="select-trigger" aria-labelledby={id}>
             <RSelect.Value />
             <RSelect.Icon aria-hidden>
-              <svg width="12" height="12" viewBox="0 0 12 12">
-                <path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" strokeWidth="1.4" />
-              </svg>
+              <CaretDown size={12} weight="bold" />
             </RSelect.Icon>
           </RSelect.Trigger>
           <RSelect.Portal>
@@ -103,18 +102,22 @@ export function SwitchField(props: { label: string; checked: boolean; onChange: 
 export function PlayButton({ label, onClick }: { label: string; onClick: () => void }) {
   return (
     <button type="button" className="play" onClick={onClick} aria-label={label} title={label}>
-      <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden>
-        <path d="M4 2.5v9l7.5-4.5z" fill="currentColor" />
-      </svg>
+      <Play size={14} weight="fill" aria-hidden />
     </button>
   );
 }
 
-/** A group's heading with room on the right for the group's own actions. */
-export function GroupHead({ title, children }: { title: string; children?: ReactNode }) {
+/**
+ * A group's heading: an icon, the title, and room on the right for the group's own actions.
+ * tone tints the icon with the breath phase it belongs to (dawn = inhale, dusk = exhale).
+ */
+export function GroupHead({ title, icon: I, tone, children }: { title: string; icon: Icon; tone?: 'in' | 'out'; children?: ReactNode }) {
   return (
     <div className="group-head">
-      <h3>{title}</h3>
+      <h3>
+        <I className="head-icon" data-tone={tone} size={20} weight="light" aria-hidden />
+        {title}
+      </h3>
       {children && <div className="group-actions">{children}</div>}
     </div>
   );
@@ -124,10 +127,7 @@ export function GroupHead({ title, children }: { title: string; children?: React
 export function GroupAction({ label, disabled, onClick }: { label: string; disabled?: boolean; onClick: () => void }) {
   return (
     <button type="button" className="group-action" disabled={disabled} onClick={onClick}>
-      <svg width="13" height="13" viewBox="0 0 14 14" aria-hidden>
-        <path d="M2.75 7a4.25 4.25 0 1 0 1.3-3.06" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-        <path d="M3.6 1.6v2.6h2.6" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
+      <ArrowCounterClockwise size={14} weight="regular" aria-hidden />
       {label}
     </button>
   );

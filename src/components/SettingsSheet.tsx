@@ -1,5 +1,9 @@
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Tabs from '@radix-ui/react-tabs';
+import {
+  ArrowCounterClockwise, BellSimple, DeviceMobile, Flask, Heartbeat, Metronome, MoonStars, MusicNotes,
+  Sparkle, SpeakerSimpleHigh, SunHorizon, Timer, Watch, Waveform, Wind, type Icon,
+} from '@phosphor-icons/react';
 import { useState } from 'react';
 import { controller, type Snapshot } from '../core/controller';
 import { DEFAULT_SETTINGS, isDefault, isPhone, type AudioQuality, type BreathMode, type BreathPattern, type CueKind, type ExhaleTexture, type InhaleTexture, type Settings, type VolumeKey } from '../core/settings';
@@ -66,16 +70,16 @@ const PATTERNS: Option<BreathPattern>[] = [
   { value: 'prog', label: 'Lengthen the exhale from 4 : 6 to 4 : 8 over 15 minutes' },
 ];
 // the mixer in sections: each breath phase, then everything that plays regardless of it
-const VOLUME_SECTIONS: { title: string; sliders: { key: VolumeKey; label: string }[] }[] = [
-  { title: 'Inhale', sliders: [
+const VOLUME_SECTIONS: { title: string; icon: Icon; tone?: 'in' | 'out'; sliders: { key: VolumeKey; label: string }[] }[] = [
+  { title: 'Inhale', icon: SunHorizon, tone: 'in', sliders: [
     { key: 'inhale', label: 'Sound at the start' },
     { key: 'inhaleTex', label: 'Sound under the inhale' },
   ] },
-  { title: 'Exhale', sliders: [
+  { title: 'Exhale', icon: MoonStars, tone: 'out', sliders: [
     { key: 'cues', label: 'Sound at the start' },
     { key: 'exhaleTex', label: 'Sound under the exhale' },
   ] },
-  { title: 'Backdrop', sliders: [
+  { title: 'Backdrop', icon: MusicNotes, sliders: [
     { key: 'breath', label: 'Waves' },
     { key: 'drone', label: 'Ambient' },
     { key: 'heart', label: 'Pulse' },
@@ -148,12 +152,12 @@ function SettingsTabs({ snap }: { snap: Snapshot }) {
 
             <Tabs.Content className="tab-panel" value="breath">
               <div className="group">
-                <h3>Rhythm</h3>
+                <GroupHead title="Rhythm" icon={Metronome} />
                 <SelectField label="Breath timing" value={s.breathMode} options={MODES} onChange={(v) => c.update({ breathMode: v })} />
                 <SelectField label="Inhale : exhale" value={s.breathPattern} options={PATTERNS} onChange={(v) => c.update({ breathPattern: v })} />
               </div>
               <div className="group">
-                <h3>Start of the inhale</h3>
+                <GroupHead title="Start of the inhale" icon={BellSimple} tone="in" />
                 <SelectField
                   label="Sound"
                   value={s.inhaleCue}
@@ -170,7 +174,7 @@ function SettingsTabs({ snap }: { snap: Snapshot }) {
                 />
               </div>
               <div className="group">
-                <h3>Start of the exhale</h3>
+                <GroupHead title="Start of the exhale" icon={BellSimple} tone="out" />
                 <SelectField
                   label="Sound"
                   value={s.exhaleCue}
@@ -187,7 +191,7 @@ function SettingsTabs({ snap }: { snap: Snapshot }) {
                 />
               </div>
               <div className="group">
-                <h3>Under the inhale</h3>
+                <GroupHead title="Under the inhale" icon={Wind} tone="in" />
                 <p>Swells through the inhale and fades just before the exhale.</p>
                 <SelectField
                   label="Sound"
@@ -198,7 +202,7 @@ function SettingsTabs({ snap }: { snap: Snapshot }) {
                 />
               </div>
               <div className="group">
-                <h3>Under the exhale</h3>
+                <GroupHead title="Under the exhale" icon={Wind} tone="out" />
                 <p>Plays beneath the exhale, starting just after its cue.</p>
                 <SelectField
                   label="Sound"
@@ -217,7 +221,7 @@ function SettingsTabs({ snap }: { snap: Snapshot }) {
 
             <Tabs.Content className="tab-panel" value="heart">
               <div className="group">
-                <h3>Smartwatch</h3>
+                <GroupHead title="Smartwatch" icon={Watch} />
                 {ble.supported ? (
                   <>
                     <p>Your smartwatch or chest strap must share heart rate over Bluetooth (the standard Heart Rate profile).</p>
@@ -241,7 +245,7 @@ function SettingsTabs({ snap }: { snap: Snapshot }) {
                 )}
               </div>
               <div className="group">
-                <h3>Simulation</h3>
+                <GroupHead title="Simulation" icon={Flask} />
                 <p>For trying the app without a smartwatch. While it’s on, smartwatch readings are ignored.</p>
                 <SwitchField label="Simulate heart rate" checked={snap.sim.enabled} onChange={(v) => c.setSim(v)} />
                 <SliderField label="Simulated heart rate" value={snap.sim.value} min={45} max={120} step={1} format={(v) => `${Math.round(v)} BPM`} onChange={(v) => c.setSimValue(v)} />
@@ -254,7 +258,7 @@ function SettingsTabs({ snap }: { snap: Snapshot }) {
                 </div>
               </div>
               <div className="group">
-                <h3>How the music follows your heart</h3>
+                <GroupHead title="How the music follows your heart" icon={Heartbeat} />
                 <p>The music tempo is your heart rate minus the gap you set, but never slower than the minimum.</p>
                 <SliderField label="Smoothing of readings" value={s.alpha} min={0.05} max={0.6} step={0.01} format={(v) => (v < 0.15 ? 'strong' : v < 0.35 ? 'medium' : 'light') + ` (${v.toFixed(2)})`} onChange={(v) => c.update({ alpha: v })} />
                 <SliderField label="Music slower than your heart by" value={s.offset} min={0} max={15} step={1} format={(v) => `${v} BPM`} onChange={(v) => c.update({ offset: v })} />
@@ -265,16 +269,16 @@ function SettingsTabs({ snap }: { snap: Snapshot }) {
 
             <Tabs.Content className="tab-panel" value="mix">
               <div className="group">
-                <GroupHead title="Volume">
+                <GroupHead title="Volume" icon={SpeakerSimpleHigh}>
                   <GroupAction label="Reset all" disabled={volsAtDefault(s, ALL_VOLUMES)} onClick={() => c.resetVolumes(ALL_VOLUMES)} />
                 </GroupHead>
                 <SliderField label="Everything" value={s.vols.master} min={-40} max={6} step={1} format={db} onChange={(v) => c.setVolume('master', v)} />
               </div>
-              {VOLUME_SECTIONS.map(({ title, sliders }) => {
+              {VOLUME_SECTIONS.map(({ title, icon, tone, sliders }) => {
                 const keys = sliders.map((x) => x.key);
                 return (
                   <div className="group" key={title}>
-                    <GroupHead title={title}>
+                    <GroupHead title={title} icon={icon} tone={tone}>
                       <GroupAction label="Reset" disabled={volsAtDefault(s, keys)} onClick={() => c.resetVolumes(keys)} />
                     </GroupHead>
                     {sliders.map(({ key, label }) => (
@@ -284,7 +288,7 @@ function SettingsTabs({ snap }: { snap: Snapshot }) {
                 );
               })}
               <div className="group">
-                <GroupHead title="Background bowls">
+                <GroupHead title="Background bowls" icon={Sparkle}>
                   <GroupAction label="Reset" disabled={isDefault(s, BOWL_KEYS)} onClick={() => c.reset(BOWL_KEYS)} />
                 </GroupHead>
                 <p>Random strikes in the music’s key. Never right after a breath cue.</p>
@@ -303,7 +307,7 @@ function SettingsTabs({ snap }: { snap: Snapshot }) {
 
             <Tabs.Content className="tab-panel" value="session">
               <div className="group">
-                <h3>Sleep timer</h3>
+                <GroupHead title="Sleep timer" icon={Timer} />
                 <p>The music fades out gently over the last minute, then the session ends.</p>
                 <SelectField
                   label="End after"
@@ -318,7 +322,7 @@ function SettingsTabs({ snap }: { snap: Snapshot }) {
                 />
               </div>
               <div className="group">
-                <h3>Screen</h3>
+                <GroupHead title="Screen" icon={DeviceMobile} />
                 <p>
                   {snap.wakeLock === 'unsupported'
                     ? 'This browser can’t keep the screen awake. Lengthen the screen timeout in your system settings so the smartwatch doesn’t disconnect.'
@@ -337,7 +341,7 @@ function SettingsTabs({ snap }: { snap: Snapshot }) {
                 />
               </div>
               <div className="group">
-                <h3>Sound quality</h3>
+                <GroupHead title="Sound quality" icon={Waveform} />
                 <p>If the sound crackles or stutters, choose a lighter setting. It takes less work from your device, and the music hardly changes.</p>
                 <SelectField label="Quality" value={s.audioQuality} options={QUALITIES} onChange={(v) => c.update({ audioQuality: v })} />
                 {snap.running && s.audioQuality !== snap.audioQuality && (
@@ -356,7 +360,7 @@ function ResetAll({ settings }: { settings: Settings }) {
   const atDefaults = isDefault(settings, ALL_KEYS);
   return (
     <div className="group">
-      <h3>Default settings</h3>
+      <GroupHead title="Default settings" icon={ArrowCounterClockwise} />
       <p>Puts every setting in every tab back the way the app came, volumes included. Your smartwatch stays connected.</p>
       <div className="btn-row" aria-live="polite">
         {!asking ? (

@@ -1,3 +1,4 @@
+import { Heartbeat, SlidersHorizontal } from '@phosphor-icons/react';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { controller, useController, type Snapshot } from './core/controller';
 import { BreathLight } from './components/BreathLight';
@@ -129,17 +130,16 @@ export default function App() {
     <div className="app" data-dim={dim} data-docked={docked}>
       <div className="main">
       <header className="topbar chrome">
-        <h1 className="wordmark">HR Breath Pacer</h1>
+        <h1 className="wordmark">
+          <Heartbeat className="wordmark-icon" size={26} weight="light" aria-hidden />
+          HR Breath Pacer
+        </h1>
         <div className="status" aria-live="polite">
           <SourceStatus snap={snap} />
           {snap.running && snap.timer.endAt != null && <span>Ends in {clock(snap.timer.endAt - snap.now)}</span>}
         </div>
         <button className="icon-btn" onClick={() => setSettingsOpen(true)} hidden={docked}>
-          <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden>
-            <path d="M2 4h7M12 4h2M2 12h2M7 12h7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-            <circle cx="10.5" cy="4" r="1.6" fill="none" stroke="currentColor" strokeWidth="1.4" />
-            <circle cx="5.5" cy="12" r="1.6" fill="none" stroke="currentColor" strokeWidth="1.4" />
-          </svg>
+          <SlidersHorizontal size={16} weight="regular" aria-hidden />
           Settings
         </button>
       </header>
