@@ -136,39 +136,44 @@ async function buildGraph() {
     const sine = { type: 'sine' as const };
     const fm = (o: object) => o as Partial<Tone.FMSynthOptions>;
     const membrane = (o: object) => o as Partial<Tone.MembraneSynthOptions>;
-    const pools: Record<string, Pool> = {
-      ping: makePool(T.Synth, { oscillator: sine, envelope: { attack: 0.005, decay: 1.6, sustain: 0, release: 1.5 } } as Partial<Tone.SynthOptions>, 4, vol('ping', -14), lp),
-      kalimba: makePool(T.FMSynth, fm({
+    // built on first use: every Tone voice keeps a few nodes running even when silent,
+    // so building all of them up front costs a phone dearly for sounds nobody picked
+    const factories: Record<string, () => Pool> = {
+      ping: () => makePool(T.Synth, { oscillator: sine, envelope: { attack: 0.005, decay: 1.6, sustain: 0, release: 1.5 } } as Partial<Tone.SynthOptions>, 4, vol('ping', -14), lp),
+      kalimba: () => makePool(T.FMSynth, fm({
         harmonicity: 4, modulationIndex: 3, oscillator: sine, modulation: sine,
         envelope: { attack: 0.003, decay: 0.9, sustain: 0, release: 0.8 },
         modulationEnvelope: { attack: 0.002, decay: 0.12, sustain: 0, release: 0.1 },
       }), 3, vol('kalimba', -14), lp),
-      glass: makePool(T.FMSynth, fm({
+      glass: () => makePool(T.FMSynth, fm({
         harmonicity: 5.4, modulationIndex: 1.2, oscillator: sine, modulation: sine,
         envelope: { attack: 0.004, decay: 2.4, sustain: 0, release: 2 },
         modulationEnvelope: { attack: 0.004, decay: 1.5, sustain: 0, release: 1 },
       }), 3, vol('glass', -20), lp),
-      bowl: makePool(T.FMSynth, fm({
+      bowl: () => makePool(T.FMSynth, fm({
         harmonicity: 3, modulationIndex: 1.5, oscillator: sine, modulation: sine,
         envelope: { attack: 0.01, decay: 2.5, sustain: 0.05, release: 5 },
         modulationEnvelope: { attack: 0.01, decay: 1.2, sustain: 0, release: 2 },
       }), 3, vol('bowl', -12), lp),
-      wood: makePool(T.MembraneSynth, membrane({
+      wood: () => makePool(T.MembraneSynth, membrane({
         pitchDecay: 0.012, octaves: 1.5, oscillator: sine,
         envelope: { attack: 0.001, decay: 0.14, sustain: 0, release: 0.08 },
       }), 2, vol('wood', -8), lp),
-      gong: makePool(T.FMSynth, fm({
+      gong: () => makePool(T.FMSynth, fm({
         harmonicity: 1.41, modulationIndex: 3.5, oscillator: sine, modulation: sine,
         envelope: { attack: 0.03, decay: 4, sustain: 0, release: 4 },
         modulationEnvelope: { attack: 0.03, decay: 2.5, sustain: 0, release: 3 },
       }), 3, vol('gong', -10), lp),
-      deep: makePool(T.MembraneSynth, membrane({
+      deep: () => makePool(T.MembraneSynth, membrane({
         pitchDecay: 0.25, octaves: 0.7, oscillator: sine,
         envelope: { attack: 0.02, decay: 2.2, sustain: 0, release: 1.5 },
       }), 2, vol('deep', -4), lp),
     };
+    const pools: Record<string, Pool> = {};
+    const pool = (kind: string) => (pools[kind] ??= factories[kind]());
     // soft tone gliding a fourth up (inhale) or down (exhale) onto the chord note
-    const glideVoices = Array.from({ length: 3 }, () => {
+    let glideVoices: Tone.Synth[] = [];
+    const makeGlideVoices = () => Array.from({ length: 3 }, () => {
       const v = new T.Synth({
         oscillator: { type: 'fatsine', count: 2, spread: 8 },
         envelope: { attack: 0.5, attackCurve: 'sine', decay: 1.2, sustain: 0.4, release: 1.8 },
@@ -179,6 +184,7 @@ async function buildGraph() {
     });
     let glideIdx = 0;
     function glide(f1: number, time: number, dur: number, up: boolean) {
+      if (!glideVoices.length) glideVoices = makeGlideVoices();
       const v = glideVoices[glideIdx++ % glideVoices.length];
       const f0 = f1 * Math.pow(2, (up ? -5 : 5) / 12);
       v.triggerAttackRelease(f0, Math.min(2.5, dur * 0.6), time, 0.7);
@@ -189,17 +195,17 @@ async function buildGraph() {
       play(kind: CueKind, time: number, f: number, dur: number, up: boolean) {
         const step = Math.pow(2, (up ? 7 : -5) / 12); // up a fifth / down a fourth
         switch (kind) {
-          case 'ping': pools.ping.trigger(f, 1.2, time, 0.8); break;
+          case 'ping': pool('ping').trigger(f, 1.2, time, 0.8); break;
           case 'double':
-            pools.ping.trigger(f, 0.8, time, 0.7);
-            pools.ping.trigger(f * step, 1.2, time + 0.22, 0.65);
+            pool('ping').trigger(f, 0.8, time, 0.7);
+            pool('ping').trigger(f * step, 1.2, time + 0.22, 0.65);
             break;
-          case 'kalimba': pools.kalimba.trigger(f, 0.6, time, 0.8); break;
-          case 'glass': pools.glass.trigger(f * 2, 1.5, time, 0.6); break;
-          case 'bowl': pools.bowl.trigger(f, 1.5, time, 0.7); break;
-          case 'wood': pools.wood.trigger(f, 0.1, time, 0.8); break;
-          case 'gong': pools.gong.trigger(f / 2, 2, time, 0.8); break;
-          case 'deep': pools.deep.trigger(f / 2, 1.5, time, 0.9); break;
+          case 'kalimba': pool('kalimba').trigger(f, 0.6, time, 0.8); break;
+          case 'glass': pool('glass').trigger(f * 2, 1.5, time, 0.6); break;
+          case 'bowl': pool('bowl').trigger(f, 1.5, time, 0.7); break;
+          case 'wood': pool('wood').trigger(f, 0.1, time, 0.8); break;
+          case 'gong': pool('gong').trigger(f / 2, 2, time, 0.8); break;
+          case 'deep': pool('deep').trigger(f / 2, 1.5, time, 0.9); break;
           case 'glide': glide(f, time, dur, up); break;
         }
       },
@@ -290,6 +296,17 @@ export class AudioEngine {
   }
 
   private async ensureGraph(): Promise<Graph> {
+    if (!this.building) {
+      // 'playback' asks the browser for large audio buffers. With Tone's default
+      // 'interactive' hint, Android Chrome renders in tiny buffers and this graph
+      // (long reverb, many voices) underruns: every sound turns into crackle.
+      // Latency doesn't matter here, the music is scheduled ahead anyway.
+      // Phones also render at half the usual sample rate: the master lowpass sits at 3.2 kHz,
+      // so nothing audible lives above 12 kHz and the halved DSP load is free.
+      const mobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
+      const ctx = new AudioContext({ latencyHint: 'playback', ...(mobile && { sampleRate: 24000 }) });
+      Tone.setContext(new Tone.Context({ context: ctx, lookAhead: 0.15 }));
+    }
     await Tone.start();
     if (!this.building) {
       this.building = buildGraph().then((g) => {
@@ -392,6 +409,7 @@ export class AudioEngine {
   }
 
   resume() {
+    if (!this.g) return;
     if (Tone.getContext().state !== 'running') Tone.getContext().resume();
   }
 
